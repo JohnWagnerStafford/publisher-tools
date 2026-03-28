@@ -1,0 +1,2063 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ingenium Books · Publisher Update — Mocenius</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;1,400&family=IBM+Plex+Mono:wght@300;400;500&display=swap');
+:root{
+  --bg:#faf8f4;--s1:#fff;--s2:#f3f0eb;--b1:#e2ddd6;--b2:#ccc8c0;
+  --gold:#9a6f1e;--g2:#b8861f;--gg:rgba(154,111,30,.07);
+  --text:#1c1a17;--dim:#6b6459;--mut:#a09890;
+  --green:#2d7a52;--gbg:rgba(45,122,82,.08);
+  --red:#b03030;--rbg:rgba(176,48,48,.08);
+  --blue:#2c5f8a;--bbg:rgba(44,95,138,.08);
+  --amber:#a06010;--abg:rgba(160,96,16,.08);
+  --shadow:0 1px 3px rgba(0,0,0,.08),0 4px 16px rgba(0,0,0,.05);
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+body{font-family:'IBM Plex Mono',monospace;background:var(--bg);color:var(--text);min-height:100vh;font-size:13px;line-height:1.6}
+body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellipse 100% 50% at 50% -10%,rgba(154,111,30,.05),transparent);pointer-events:none;z-index:0}
+
+/* HEADER */
+header{position:relative;z-index:10;padding:20px 48px 16px;border-bottom:1px solid var(--b1);display:flex;align-items:flex-end;justify-content:space-between;background:#fff}
+.brand{font-family:'Cormorant Garamond',serif;font-size:24px;font-weight:600}
+.brand em{color:var(--gold);font-style:normal}
+.brand-sub{font-size:10px;letter-spacing:.2em;text-transform:uppercase;color:var(--mut);margin-top:3px}
+.hdr-r{text-align:right;font-size:10px;color:var(--mut);line-height:1.9}
+
+/* STEPS */
+.steps{position:relative;z-index:10;background:#fff;border-bottom:1px solid var(--b1);padding:0 48px;display:flex;overflow-x:auto;scrollbar-width:none}
+.steps::-webkit-scrollbar{display:none}
+.step{display:flex;align-items:center;gap:8px;padding:12px 16px;font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--mut);border-bottom:2px solid transparent;white-space:nowrap;flex-shrink:0;transition:all .2s}
+.step.active{color:var(--gold);border-bottom-color:var(--gold)}
+.step.done{color:var(--green);border-bottom-color:var(--green)}
+.step-n{width:17px;height:17px;border-radius:50%;border:1.5px solid currentColor;display:flex;align-items:center;justify-content:center;font-size:9px;flex-shrink:0}
+
+/* WRAP & PANELS */
+.wrap{position:relative;z-index:5;max-width:800px;margin:0 auto;padding:40px 24px 130px}
+.panel{display:none}
+.panel.active{display:block;animation:fadeUp .2s ease}
+@keyframes fadeUp{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
+
+/* HEADINGS */
+.sec-hdr{margin-bottom:28px}
+.sec-title{font-family:'Cormorant Garamond',serif;font-size:30px;font-weight:600;margin-bottom:6px;line-height:1.2}
+.sec-title em{color:var(--gold);font-style:normal}
+.sec-sub{font-size:12px;color:var(--dim);line-height:1.85;max-width:540px}
+.sub-label{font-size:9px;letter-spacing:.18em;text-transform:uppercase;color:var(--gold);margin-bottom:12px;padding-bottom:7px;border-bottom:1px solid rgba(154,111,30,.2)}
+hr{border:none;border-top:1px solid var(--b1);margin:24px 0}
+
+/* LOAD ZONE */
+.load-zone{border:2px dashed var(--b2);border-radius:8px;padding:48px 32px;text-align:center;cursor:pointer;transition:all .2s;background:#fff;position:relative}
+.load-zone:hover,.load-zone.over{border-color:var(--gold);background:var(--gg)}
+.load-zone input{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%}
+.load-icon{font-size:36px;margin-bottom:14px}
+.load-title{font-family:'Cormorant Garamond',serif;font-size:22px;font-weight:600;margin-bottom:6px}
+.load-sub{font-size:11px;color:var(--dim);line-height:1.8}
+.load-status{margin-top:14px;padding:12px 16px;border-radius:4px;font-size:12px;display:none;line-height:1.7}
+.divider-or{display:flex;align-items:center;gap:12px;margin:20px 0;color:var(--mut);font-size:10px;letter-spacing:.1em;text-transform:uppercase}
+.divider-or::before,.divider-or::after{content:'';flex:1;height:1px;background:var(--b1)}
+
+/* MASTER STATS */
+.stats-row{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:22px}
+.stat-card{background:var(--s2);border:1px solid var(--b1);border-radius:4px;padding:14px 16px}
+.stat-label{font-size:9px;letter-spacing:.14em;text-transform:uppercase;color:var(--mut);margin-bottom:4px}
+.stat-val{font-family:'Cormorant Garamond',serif;font-size:28px;font-weight:600;color:var(--gold);line-height:1}
+.stat-new{font-size:10px;color:var(--red);margin-top:2px}
+
+/* CATEGORY & ACTION CARDS */
+.cat-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:20px}
+.act-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:20px}
+.sel-card{border:1.5px solid var(--b1);border-radius:6px;padding:20px 16px;cursor:pointer;transition:all .2s;background:#fff;text-align:center;user-select:none;position:relative;box-shadow:var(--shadow)}
+.sel-card:hover{border-color:var(--b2);box-shadow:0 2px 8px rgba(0,0,0,.1)}
+.sel-card.on{border-color:var(--gold);box-shadow:0 0 0 3px rgba(154,111,30,.12)}
+.sel-card.on::after{content:'';position:absolute;bottom:-1px;left:50%;transform:translateX(-50%);width:28px;height:2px;background:var(--gold)}
+.sel-card.new-card.on{border-color:var(--green);box-shadow:0 0 0 3px rgba(45,122,82,.12)}
+.sel-card.new-card.on::after{background:var(--green)}
+.sel-card.upd-card.on{border-color:var(--blue);box-shadow:0 0 0 3px rgba(44,95,138,.12)}
+.sel-card.upd-card.on::after{background:var(--blue)}
+.sc-icon{font-size:24px;margin-bottom:10px;display:block}
+.sc-label{font-size:12px;font-weight:500;color:var(--text);display:block;margin-bottom:4px}
+.sc-desc{font-size:11px;color:var(--mut);display:block;line-height:1.5}
+.action-badge{display:inline-block;padding:2px 8px;border-radius:10px;font-size:10px;font-weight:500;margin-bottom:8px}
+.badge-new{background:rgba(45,122,82,.1);color:var(--green)}
+.badge-upd{background:rgba(44,95,138,.1);color:var(--blue)}
+
+/* FORM */
+.form-grid{display:grid;gap:14px}
+.g2{grid-template-columns:1fr 1fr}
+.g3{grid-template-columns:1fr 1fr 1fr}
+@media(max-width:580px){.g2,.g3,.cat-grid,.act-grid{grid-template-columns:1fr}}
+.f{display:flex;flex-direction:column;gap:5px}
+.f.s2{grid-column:span 2}
+.f.s3{grid-column:span 3}
+@media(max-width:580px){.f.s2,.f.s3{grid-column:span 1}}
+.f label{font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--dim);display:flex;align-items:center;gap:6px}
+.req{color:var(--gold);font-size:11px}
+.opt{font-size:9px;color:var(--mut);text-transform:none;font-style:italic;font-weight:300}
+input[type=text],input[type=email],input[type=number],input[type=date],
+select,textarea{width:100%;padding:9px 12px;background:#fff;border:1.5px solid var(--b1);border-radius:4px;font-family:'IBM Plex Mono',monospace;font-size:12px;color:var(--text);transition:border-color .15s,box-shadow .15s;-webkit-appearance:none;appearance:none}
+input:focus,select:focus,textarea:focus{outline:none;border-color:var(--gold);box-shadow:0 0 0 3px rgba(154,111,30,.1)}
+input::placeholder,textarea::placeholder{color:var(--mut)}
+textarea{resize:vertical}
+select option{background:#fff}
+.hint{font-size:11px;color:var(--mut);margin-top:2px;line-height:1.5}
+.err-msg{font-size:11px;color:var(--red);margin-top:2px;display:none}
+.has-err input,.has-err select,.has-err textarea{border-color:var(--red)!important;box-shadow:0 0 0 3px rgba(176,48,48,.08)!important}
+.has-err .err-msg{display:block}
+
+/* STATUS BADGE */
+.status-new{display:inline-flex;align-items:center;gap:5px;padding:3px 10px;background:rgba(176,48,48,.08);border:1px solid rgba(176,48,48,.2);border-radius:10px;font-size:10px;color:var(--red);font-weight:500}
+.status-pending{display:inline-flex;align-items:center;gap:5px;padding:3px 10px;background:var(--abg);border:1px solid rgba(160,96,16,.2);border-radius:10px;font-size:10px;color:var(--amber);font-weight:500}
+.status-imported{display:inline-flex;align-items:center;gap:5px;padding:3px 10px;background:var(--gbg);border:1px solid rgba(45,122,82,.2);border-radius:10px;font-size:10px;color:var(--green);font-weight:500}
+
+/* RECORD SELECTOR */
+.record-sel-wrap{background:var(--s2);border:1.5px solid var(--b1);border-radius:6px;padding:18px;margin-bottom:20px}
+.record-sel-label{font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--gold);margin-bottom:10px}
+.record-preview{margin-top:12px;padding:12px 14px;background:#fff;border:1px solid var(--b1);border-radius:4px;font-size:11px;line-height:1.9;display:none}
+.record-preview-row{display:flex;gap:16px}
+.rpr-key{color:var(--mut);min-width:120px}
+.rpr-val{color:var(--text)}
+
+/* GENERATED ID */
+.gen-id{display:inline-flex;align-items:center;gap:6px;padding:5px 12px;background:var(--s2);border:1px solid var(--b1);border-radius:3px;font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--gold);margin-top:4px;letter-spacing:.04em}
+
+/* FORMAT BADGES */
+.fmt{padding:2px 8px;border-radius:3px;font-size:9px;letter-spacing:.04em;vertical-align:middle;font-weight:500}
+.fmt-pb{background:rgba(44,95,138,.1);color:#2c5f8a}
+.fmt-hc{background:rgba(154,111,30,.12);color:var(--gold)}
+.fmt-lp{background:rgba(45,122,82,.1);color:var(--green)}
+.fmt-eb{background:rgba(110,70,160,.1);color:#6e46a0}
+.fmt-ab{background:rgba(160,90,30,.1);color:#a05a1e}
+
+/* RATE ROW */
+.rate-row{display:grid;grid-template-columns:1fr auto;gap:12px;align-items:center;padding:11px 16px;background:var(--s2);border:1.5px solid var(--b1);border-radius:4px;margin-bottom:8px}
+.rate-inputs{display:flex;align-items:center;gap:8px}
+
+/* CONTRIBUTOR */
+.contrib-card{background:#fff;border:1.5px solid var(--b1);border-radius:6px;margin-bottom:10px;overflow:hidden;box-shadow:var(--shadow)}
+.contrib-hdr{display:flex;align-items:center;justify-content:space-between;padding:10px 16px;border-bottom:1px solid var(--b1);cursor:pointer;user-select:none;background:var(--s2)}
+.contrib-hdr-l{display:flex;align-items:center;gap:10px;min-width:0}
+.contrib-num{font-size:10px;color:var(--mut);flex-shrink:0}
+.contrib-name{font-size:12px;font-weight:500;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.contrib-body{padding:16px}
+.btn-x{background:transparent;border:1.5px solid var(--b2);border-radius:3px;color:var(--mut);cursor:pointer;width:28px;height:28px;display:flex;align-items:center;justify-content:center;font-size:14px;transition:all .15s;flex-shrink:0}
+.btn-x:hover{border-color:var(--red);color:var(--red)}
+.role-chips{display:flex;flex-wrap:wrap;gap:7px}
+.rchip{padding:5px 13px;border:1.5px solid var(--b1);border-radius:20px;font-size:11px;color:var(--dim);cursor:pointer;transition:all .15s;user-select:none;background:#fff}
+.rchip:hover{border-color:var(--b2);color:var(--text)}
+.rchip.on{border-color:var(--gold);color:var(--gold);background:var(--gg)}
+
+/* SPLIT TALLY */
+.split-tally{padding:10px 16px;background:var(--s2);border:1.5px solid var(--b1);border-radius:4px;display:flex;justify-content:space-between;align-items:center;font-size:11px;margin-top:6px}
+.split-n{font-family:'Cormorant Garamond',serif;font-size:22px;font-weight:600}
+.ok{color:var(--green)}
+.bad{color:var(--red)}
+
+/* CALLOUTS */
+.note{padding:14px 16px;border-radius:4px;font-size:12px;line-height:1.8;margin-bottom:18px}
+.note-i{background:#eef4fa;border:1px solid rgba(44,95,138,.25);color:#2c5f8a}
+.note-w{background:#fdf0f0;border:1px solid rgba(176,48,48,.25);color:#b03030}
+.note-g{background:#fdf9f0;border:1px solid rgba(154,111,30,.25);color:#7a5510}
+.reason-wrap{background:var(--s2);border:1.5px solid var(--b1);border-left:3px solid var(--gold);border-radius:4px;padding:16px 18px;margin-bottom:20px}
+.reason-wrap>label{font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--gold);display:block;margin-bottom:8px}
+
+/* ADD BTN */
+.btn-add{display:flex;align-items:center;justify-content:center;gap:8px;width:100%;padding:11px;background:#fff;border:1.5px dashed var(--b2);border-radius:4px;color:var(--dim);cursor:pointer;font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:.05em;transition:all .2s}
+.btn-add:hover{border-color:var(--gold);color:var(--gold);background:var(--gg)}
+
+/* RECALL CARD */
+.recall-card{background:#fff;border:1.5px solid var(--gold);border-radius:6px;padding:20px 22px;margin-bottom:24px;box-shadow:0 0 0 4px rgba(154,111,30,.07)}
+.recall-label{font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--gold);margin-bottom:10px}
+
+/* REVIEW */
+.rev-group{background:#fff;border:1.5px solid var(--b1);border-radius:6px;margin-bottom:12px;overflow:hidden;box-shadow:var(--shadow)}
+.rev-group-title{padding:9px 16px;background:var(--s2);font-size:9px;letter-spacing:.15em;text-transform:uppercase;color:var(--gold);border-bottom:1px solid var(--b1)}
+.rev-row{display:flex;justify-content:space-between;gap:16px;padding:9px 16px;border-bottom:1px solid var(--b1);font-size:11px}
+.rev-row:last-child{border-bottom:none}
+.rk{color:var(--mut);flex-shrink:0;min-width:160px}
+.rv{color:var(--text);text-align:right;word-break:break-word}
+
+/* SUCCESS */
+.success-wrap{text-align:center;padding:56px 24px}
+.success-icon{font-size:52px;margin-bottom:18px}
+.success-title{font-family:'Cormorant Garamond',serif;font-size:34px;font-weight:600;color:var(--gold);margin-bottom:10px}
+.success-sub{font-size:12px;color:var(--dim);max-width:500px;margin:0 auto 32px;line-height:1.9}
+.vault-path{font-family:'IBM Plex Mono',monospace;font-size:10px;background:var(--s2);padding:6px 12px;border-radius:3px;display:inline-block;margin-top:6px;color:var(--dim);border:1px solid var(--b1)}
+
+/* BAR */
+.bar{position:fixed;bottom:0;left:0;right:0;padding:14px 48px;background:#fff;border-top:1px solid var(--b1);display:flex;align-items:center;justify-content:space-between;z-index:50;box-shadow:0 -2px 12px rgba(0,0,0,.06)}
+.bar-dots{display:flex;gap:5px;align-items:center}
+.bdot{width:6px;height:6px;border-radius:50%;background:var(--b2);transition:all .2s}
+.bdot.active{background:var(--gold);width:18px;border-radius:3px}
+.bdot.done{background:var(--green)}
+.bar-btns{display:flex;gap:10px}
+.btn{padding:9px 22px;border-radius:3px;border:none;cursor:pointer;font-family:'IBM Plex Mono',monospace;font-size:11px;font-weight:500;letter-spacing:.08em;text-transform:uppercase;transition:all .15s;display:inline-flex;align-items:center;gap:7px}
+.btn-gold{background:var(--gold);color:#fff}
+.btn-gold:hover{background:var(--g2)}
+.btn-ol{background:transparent;border:1.5px solid var(--b2);color:var(--dim)}
+.btn-ol:hover{border-color:var(--text);color:var(--text)}
+.btn-green{background:var(--green);color:#fff}
+.btn-green:hover{background:#246643}
+.btn:disabled{opacity:.35;cursor:not-allowed;pointer-events:none}
+
+/* TOAST */
+.toast{position:fixed;bottom:76px;right:28px;padding:10px 16px;background:#fff;border:1.5px solid var(--green);border-radius:4px;font-size:11px;color:var(--green);opacity:0;transform:translateY(8px);transition:all .22s;pointer-events:none;z-index:200;box-shadow:var(--shadow)}
+.toast.show{opacity:1;transform:translateY(0)}
+.toast.err{border-color:var(--red);color:var(--red)}
+
+/* LOG */
+.log-toggle{position:fixed;bottom:72px;left:48px;z-index:60;display:flex;align-items:center;gap:7px;padding:7px 14px;background:#fff;border:1.5px solid var(--b2);border-radius:3px;font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--dim);cursor:pointer;transition:all .2s;box-shadow:var(--shadow)}
+.log-toggle:hover{border-color:var(--gold);color:var(--gold)}
+.log-count{background:var(--gold);color:#fff;border-radius:10px;padding:1px 6px;font-size:9px;font-weight:500}
+.log-drawer{position:fixed;bottom:0;left:0;right:0;height:420px;background:#fff;border-top:1.5px solid var(--b1);z-index:80;display:flex;flex-direction:column;transform:translateY(100%);transition:transform .28s cubic-bezier(.4,0,.2,1);box-shadow:0 -4px 24px rgba(0,0,0,.1)}
+.log-drawer.open{transform:translateY(0)}
+.log-drawer-hdr{display:flex;align-items:center;justify-content:space-between;padding:13px 48px;border-bottom:1px solid var(--b1);flex-shrink:0;background:var(--s2)}
+.log-drawer-title{font-family:'Cormorant Garamond',serif;font-size:18px;font-weight:600}
+.log-drawer-title em{color:var(--gold);font-style:normal}
+.log-close{background:transparent;border:1.5px solid var(--b2);border-radius:3px;color:var(--mut);cursor:pointer;width:28px;height:28px;display:flex;align-items:center;justify-content:center;font-size:16px;transition:all .15s}
+.log-close:hover{border-color:var(--text);color:var(--text)}
+.log-body{overflow-y:auto;flex:1;padding:0 48px 20px}
+.log-table{width:100%;border-collapse:collapse;margin-top:14px}
+.log-table th{padding:8px 12px;font-size:9px;letter-spacing:.12em;text-transform:uppercase;color:var(--mut);text-align:left;border-bottom:1.5px solid var(--b1);white-space:nowrap;background:#fff;position:sticky;top:0}
+.log-table td{padding:9px 12px;font-size:11px;border-bottom:1px solid var(--b1);vertical-align:middle}
+.log-table tr:last-child td{border-bottom:none}
+.log-table tr:hover td{background:var(--s2)}
+.log-type-pill{display:inline-flex;padding:2px 8px;border-radius:3px;font-size:10px;font-weight:500}
+.ltp-nc{background:rgba(45,122,82,.1);color:var(--green)}
+.ltp-uc{background:rgba(44,95,138,.1);color:var(--blue)}
+.ltp-nt{background:rgba(154,111,30,.12);color:var(--gold)}
+.ltp-ut{background:rgba(160,90,30,.1);color:#a05a1e}
+.ltp-ni{background:rgba(110,70,160,.1);color:#6e46a0}
+.ltp-ui{background:rgba(44,95,138,.08);color:var(--blue)}
+.ltp-rr{background:rgba(176,48,48,.08);color:var(--red)}
+.ltp-rs{background:rgba(176,48,48,.08);color:var(--red)}
+.log-empty{padding:40px;text-align:center;color:var(--mut);font-size:12px}
+
+@media(max-width:580px){
+  header,.steps,.bar,.log-drawer-hdr,.log-body{padding-left:20px;padding-right:20px}
+  .steps{padding:0 16px}
+  .wrap{padding:28px 16px 120px}
+  .log-toggle{left:20px;bottom:68px}
+}
+</style>
+</head>
+<body>
+
+<header>
+  <div>
+    <div class="brand"><em>Mocenius</em> · Publisher Update</div>
+    <div class="brand-sub">Title &amp; Author Data Submission</div>
+  </div>
+  <div class="hdr-r">
+    Secure · Client-facing<br>
+    <span id="hdr-ref" style="color:var(--dim)">No submission in progress</span>
+  </div>
+</header>
+
+<div class="steps">
+  <div class="step active" id="stab-0"><span class="step-n" id="sn-0">1</span>Data File</div>
+  <div class="step" id="stab-1"><span class="step-n" id="sn-1">2</span>Request</div>
+  <div class="step" id="stab-2"><span class="step-n" id="sn-2">3</span>Your Details</div>
+  <div class="step" id="stab-3"><span class="step-n" id="sn-3">4</span><span id="stab3-label">Information</span></div>
+  <div class="step" id="stab-4"><span class="step-n" id="sn-4">5</span>Review &amp; Submit</div>
+</div>
+
+<div class="wrap">
+
+<!-- ══════════════════════════════════════
+     STEP 0 — LOAD DATA FILE
+══════════════════════════════════════ -->
+<div class="panel active" id="panel-0">
+  <div class="sec-hdr">
+    <div class="sec-title">Load your <em>data file</em></div>
+    <div class="sec-sub">Drop in your publisher data file to pre-fill your records and see existing titles and contacts. First time? Start fresh below.</div>
+  </div>
+  <div class="load-zone" id="load-zone">
+    <input type="file" id="load-fi" accept=".xlsx" />
+    <div class="load-icon">📂</div>
+    <div class="load-title">Drop your data file here</div>
+    <div class="load-sub">Your file is named <strong>[CODE]-PublisherData.xlsx</strong><br>Find it in your Dropbox Data Vault folder</div>
+  </div>
+  <div class="load-status" id="load-status"></div>
+  <div class="divider-or">or</div>
+  <div style="text-align:center">
+    <button class="btn btn-ol" onclick="startFresh()">First submission — start fresh</button>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════
+     STEP 1 — REQUEST TYPE
+══════════════════════════════════════ -->
+<div class="panel" id="panel-1">
+  <div class="sec-hdr">
+    <div class="sec-title">What would you like to <em>update</em>?</div>
+    <div class="sec-sub">First choose a category, then whether you're adding something new or updating an existing record.</div>
+  </div>
+
+  <div id="master-stats" style="display:none;margin-bottom:24px">
+    <div class="stats-row">
+      <div class="stat-card">
+        <div class="stat-label">Contacts</div>
+        <div class="stat-val" id="stat-contacts">0</div>
+        <div class="stat-new" id="stat-contacts-new"></div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Titles</div>
+        <div class="stat-val" id="stat-titles">0</div>
+        <div class="stat-new" id="stat-titles-new"></div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">ISBNs</div>
+        <div class="stat-val" id="stat-isbns">0</div>
+        <div class="stat-new" id="stat-isbns-new"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="sub-label">Category</div>
+  <div class="cat-grid" style="margin-bottom:20px">
+    <div class="sel-card" id="cat-contact" onclick="selectCat('contact')">
+      <span class="sc-icon">👤</span>
+      <span class="sc-label">Contact</span>
+      <span class="sc-desc">Author, narrator, designer or other contributor</span>
+    </div>
+    <div class="sel-card" id="cat-title" onclick="selectCat('title')">
+      <span class="sc-icon">📖</span>
+      <span class="sc-label">Title</span>
+      <span class="sc-desc">Book title and contract terms</span>
+    </div>
+    <div class="sel-card" id="cat-isbn" onclick="selectCat('isbn')">
+      <span class="sc-icon">🔢</span>
+      <span class="sc-label">ISBN · Royalty</span>
+      <span class="sc-desc">Format editions, ISBNs, and royalty changes</span>
+    </div>
+  </div>
+
+  <div id="action-section" style="display:none">
+    <div class="sub-label" id="action-label">Action</div>
+    <div class="act-grid" id="action-grid"></div>
+  </div>
+
+  <div class="note note-i" id="type-note" style="display:none"></div>
+</div>
+
+<!-- ══════════════════════════════════════
+     STEP 2 — YOUR DETAILS
+══════════════════════════════════════ -->
+<div class="panel" id="panel-2">
+  <div class="sec-hdr">
+    <div class="sec-title">Your <em>details</em></div>
+    <div class="sec-sub">Saved on this device — you won't need to re-enter these next time.</div>
+  </div>
+  <div class="recall-card" id="recall-card" style="display:none">
+    <div class="recall-label">Welcome back</div>
+    <div style="font-size:15px;font-weight:500;margin-bottom:4px" id="recall-name"></div>
+    <div style="font-size:12px;color:var(--dim);margin-bottom:16px" id="recall-meta"></div>
+    <div style="display:flex;gap:10px;flex-wrap:wrap">
+      <button class="btn btn-gold" onclick="confirmRecall()">That's me — continue</button>
+      <button class="btn btn-ol" onclick="dismissRecall()">Not me — enter details</button>
+    </div>
+  </div>
+  <div id="sub-fields">
+    <div class="form-grid g3">
+      <div class="f"><label>First Name <span class="req">●</span></label>
+        <input type="text" id="sub-fn" placeholder="Jane" oninput="lv(this);previewContactId()" />
+        <div class="err-msg">Required</div></div>
+      <div class="f"><label>Last Name <span class="req">●</span></label>
+        <input type="text" id="sub-ln" placeholder="Smith" oninput="lv(this);previewContactId()" />
+        <div class="err-msg">Required</div></div>
+      <div class="f"><label>Email <span class="req">●</span></label>
+        <input type="email" id="sub-email" placeholder="jane@example.com" oninput="lv(this)" />
+        <div class="err-msg">Valid email required</div></div>
+      <div class="f s2"><label>Publisher / Company <span class="req">●</span></label>
+        <input type="text" id="sub-co" placeholder="e.g. Lake Drive Books" oninput="lv(this)" />
+        <div class="err-msg">Required</div></div>
+      <div class="f"><label>Royalty Currency <span class="req">●</span></label>
+        <select id="sub-cur" onchange="lv(this)">
+          <option value="">— Select —</option>
+          <option>USD</option><option>CAD</option><option>GBP</option>
+          <option>EUR</option><option>AUD</option>
+        </select>
+        <div class="hint">Currency used for royalty payments</div>
+        <div class="err-msg">Required</div></div>
+      <div class="f"><label>Your Role <span class="opt">optional</span></label>
+        <select id="sub-role">
+          <option value="">— Select —</option>
+          <option>Publisher / Owner</option><option>Administrator</option>
+          <option>Author</option><option>Agent</option>
+          <option>Estate / Legal Representative</option><option>Other</option>
+        </select></div>
+      <div class="f"><label>Date <span class="req">●</span></label>
+        <input type="date" id="sub-date" oninput="lv(this)" />
+        <div class="err-msg">Required</div></div>
+    </div>
+    <div id="contact-id-preview" style="display:none;margin-top:12px">
+      <div style="font-size:9px;letter-spacing:.12em;text-transform:uppercase;color:var(--mut);margin-bottom:4px">Your Contact ID will be</div>
+      <div class="gen-id" id="gen-id-val">—</div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════
+     STEP 3 PANELS — one per request type
+══════════════════════════════════════ -->
+
+<!-- NEW CONTACT -->
+<div class="panel" id="panel-new-contact">
+  <div class="sec-hdr">
+    <div class="sec-title">New <em>Contact</em></div>
+    <div class="sec-sub">Register a new author, narrator, designer, or other contributor who will receive royalties.</div>
+  </div>
+  <div class="sub-label">Personal Details</div>
+  <div class="form-grid g3" style="margin-bottom:20px">
+    <div class="f"><label>First Name <span class="req">●</span></label>
+      <input type="text" id="nc-fn" placeholder="First name" oninput="lv(this);updateNcId()" />
+      <div class="err-msg">Required</div></div>
+    <div class="f"><label>Last Name <span class="req">●</span></label>
+      <input type="text" id="nc-ln" placeholder="Last name" oninput="lv(this);updateNcId()" />
+      <div class="err-msg">Required</div></div>
+    <div class="f"><label>Email <span class="req">●</span></label>
+      <input type="email" id="nc-email" placeholder="email@example.com" oninput="lv(this)" />
+      <div class="err-msg">Required</div></div>
+    <div class="f"><label>Pseudonym <span class="opt">optional</span></label>
+      <input type="text" id="nc-pseudo" placeholder="Pen name or stage name" /></div>
+    <div class="f"><label>Phone <span class="opt">optional</span></label>
+      <input type="text" id="nc-phone" placeholder="Phone number" /></div>
+    <div class="f"><label>Status</label>
+      <select id="nc-status">
+        <option value="active">Active</option>
+        <option value="inactive">Inactive</option>
+        <option value="cancelled">Cancelled</option>
+      </select></div>
+  </div>
+  <div class="sub-label">Persona</div>
+  <div class="role-chips" style="margin-bottom:20px">
+    <div class="rchip on" onclick="pickRole(this)" data-r="Author">Author</div>
+    <div class="rchip" onclick="pickRole(this)" data-r="Co-Author">Co-Author</div>
+    <div class="rchip" onclick="pickRole(this)" data-r="Narrator">Narrator</div>
+    <div class="rchip" onclick="pickRole(this)" data-r="Cover Designer">Cover Designer</div>
+    <div class="rchip" onclick="pickRole(this)" data-r="Producer">Producer</div>
+    <div class="rchip" onclick="pickRole(this)" data-r="Editor">Editor</div>
+  </div>
+  <div class="sub-label">Address <span style="font-size:9px;color:var(--mut);text-transform:none;font-style:italic;font-weight:300"> — optional</span></div>
+  <div class="form-grid g2" style="margin-bottom:20px">
+    <div class="f s2"><input type="text" id="nc-street" placeholder="Street address" /></div>
+    <div class="f s2"><input type="text" id="nc-street2" placeholder="Apartment, suite, unit, PO Box" /></div>
+    <div class="f"><input type="text" id="nc-city" placeholder="City" /></div>
+    <div class="f"><input type="text" id="nc-state" placeholder="State / Province" /></div>
+    <div class="f"><input type="text" id="nc-zip" placeholder="Postal / ZIP" /></div>
+    <div class="f"><input type="text" id="nc-country" placeholder="Country" /></div>
+  </div>
+  <div id="nc-id-preview" style="display:none;margin-bottom:16px">
+    <div style="font-size:9px;letter-spacing:.12em;text-transform:uppercase;color:var(--mut);margin-bottom:4px">Contact ID (auto-generated)</div>
+    <div class="gen-id" id="nc-id-val">—</div>
+  </div>
+  <div class="f"><label>Notes <span class="opt">optional</span></label>
+    <textarea id="nc-notes" rows="2" placeholder="Any additional information…"></textarea></div>
+</div>
+
+<!-- UPDATE CONTACT -->
+<div class="panel" id="panel-update-contact">
+  <div class="sec-hdr">
+    <div class="sec-title">Update <em>Contact</em></div>
+    <div class="sec-sub">Select the contact to update, then fill in only the fields that are changing.</div>
+  </div>
+  <div class="record-sel-wrap">
+    <div class="record-sel-label">Select Contact</div>
+    <select id="uc-sel" onchange="onContactSelect()">
+      <option value="">— Select a contact —</option>
+    </select>
+    <div class="record-preview" id="uc-preview">
+      <div class="record-preview-row"><span class="rpr-key">Contact ID</span><span class="rpr-val" id="uc-prev-id">—</span></div>
+      <div class="record-preview-row"><span class="rpr-key">Email on file</span><span class="rpr-val" id="uc-prev-email">—</span></div>
+      <div class="record-preview-row"><span class="rpr-key">Persona</span><span class="rpr-val" id="uc-prev-role">—</span></div>
+      <div class="record-preview-row"><span class="rpr-key">Status</span><span class="rpr-val" id="uc-prev-status">—</span></div>
+    </div>
+  </div>
+  <div class="note note-i">Fill in only the fields that are changing. Leave everything else blank.</div>
+  <div class="form-grid g2" style="margin-bottom:20px">
+    <div class="f"><label>New First Name <span class="opt">if changing</span></label><input type="text" id="uc-fn" placeholder="New first name" /></div>
+    <div class="f"><label>New Last Name <span class="opt">if changing</span></label><input type="text" id="uc-ln" placeholder="New last name" /></div>
+    <div class="f s2"><label>New Email <span class="opt">if changing</span></label><input type="email" id="uc-email" placeholder="New email address" /></div>
+    <div class="f"><label>New Pseudonym <span class="opt">if changing</span></label><input type="text" id="uc-pseudo" placeholder="New pen name or stage name" /></div>
+    <div class="f"><label>New Status <span class="opt">if changing</span></label>
+      <select id="uc-status"><option value="">— No change —</option>
+        <option>Active</option><option>Inactive</option><option>Cancelled</option></select></div>
+    <div class="f s2"><label>New Street Address <span class="opt">if changing</span></label><input type="text" id="uc-street" placeholder="Street address" /></div>
+    <div class="f s2"><label>New Street Address Line 2 <span class="opt">if changing</span></label><input type="text" id="uc-street2" placeholder="Apartment, suite, unit, PO Box" /></div>
+    <div class="f"><label>New City <span class="opt">if changing</span></label><input type="text" id="uc-city" placeholder="City" /></div>
+    <div class="f"><label>New State / Province <span class="opt">if changing</span></label><input type="text" id="uc-state" placeholder="State or Province" /></div>
+    <div class="f"><label>New Postal / ZIP <span class="opt">if changing</span></label><input type="text" id="uc-zip" placeholder="Postal or ZIP" /></div>
+    <div class="f"><label>New Country <span class="opt">if changing</span></label><input type="text" id="uc-country" placeholder="Country" /></div>
+  </div>
+  <div class="reason-wrap">
+    <label>Reason for Change <span class="req">●</span></label>
+    <select id="uc-reason" onchange="toggleDeceasedNote('uc')">
+      <option value="">— Select a reason —</option>
+      <option>Moved address</option><option>Changed email address</option>
+      <option>Legal name change</option><option>Status change</option>
+      <option>Author deceased — estate transfer</option>
+      <option>Author deceased — writing partner transfer</option>
+      <option>Correction to existing record</option><option>Other</option>
+    </select>
+  </div>
+  <div class="note note-w" id="uc-deceased-note" style="display:none"><strong>Sensitive change.</strong> Mocenius will contact you to collect supporting documentation before this change is processed.</div>
+  <div class="f"><label>Notes <span class="opt">optional</span></label>
+    <textarea id="uc-notes" rows="2" placeholder="Any context that will help us process this correctly…"></textarea></div>
+</div>
+
+<!-- NEW TITLE -->
+<div class="panel" id="panel-new-title">
+  <div class="sec-hdr">
+    <div class="sec-title">New <em>Title</em></div>
+    <div class="sec-sub">Register a new book and its contract terms. Add ISBNs if ready — more can be added later.</div>
+  </div>
+  <div class="sub-label">Book Information</div>
+  <div class="form-grid g2" style="margin-bottom:20px">
+    <div class="f s2"><label>Title <span class="req">●</span></label>
+      <input type="text" id="nt-title" placeholder="Full title of the book" oninput="lv(this)" />
+      <div class="err-msg">Required</div></div>
+    <div class="f s2"><label>Subtitle <span class="opt">optional</span></label>
+      <input type="text" id="nt-sub" placeholder="Subtitle if applicable" /></div>
+    <div class="f"><label>On Sale Date <span class="req">●</span></label>
+      <input type="date" id="nt-date" oninput="lv(this)" />
+      <div class="err-msg">Required</div></div>
+    <div class="f"><label>Author / Primary Contact <span class="req">●</span></label>
+      <select id="nt-contact-sel" onchange="lv(this)">
+        <option value="">— Select contact —</option>
+      </select>
+      <div class="hint">The contact this title belongs to</div>
+      <div class="err-msg">Required</div></div>
+  </div>
+  <hr>
+  <div class="sub-label">ISBNs &amp; Formats</div>
+  <div class="note note-i" style="margin-bottom:14px">Leave blank for formats not yet published.</div>
+  <div class="form-grid g2" style="margin-bottom:20px">
+    <div class="f"><label><span class="fmt fmt-pb">Paperback</span>&ensp;ISBN-13</label>
+      <input type="text" id="isbn-pb" placeholder="e.g. 9780000000000" maxlength="20" />
+      <div class="hint">13 digits, hyphens optional</div></div>
+    <div class="f"><label><span class="fmt fmt-hc">Hardcover</span>&ensp;ISBN-13</label>
+      <input type="text" id="isbn-hc" placeholder="e.g. 9780000000000" maxlength="20" /></div>
+    <div class="f"><label><span class="fmt fmt-lp">Large Print</span>&ensp;ISBN-13</label>
+      <input type="text" id="isbn-lp" placeholder="e.g. 9780000000000" maxlength="20" /></div>
+    <div class="f"><label><span class="fmt fmt-eb">Ebook</span>&ensp;ISBN or ASIN</label>
+      <input type="text" id="isbn-eb" placeholder="978… or B0XXXXXXXX" maxlength="20" />
+      <div class="hint">ISBN-13 preferred; ASIN if no ISBN</div></div>
+    <div class="f"><label><span class="fmt fmt-ab">Audiobook</span>&ensp;ISBN or ACX ID</label>
+      <input type="text" id="isbn-ab" placeholder="978… or BK_ACX0_XXXXXX" maxlength="30" /></div>
+    <div class="f"><label><span class="fmt fmt-ab">Audiobook</span>&ensp;Audible ASIN <span class="opt">optional</span></label>
+      <input type="text" id="isbn-ab2" placeholder="B0XXXXXXXX" maxlength="20" /></div>
+  </div>
+  <hr>
+  <div class="sub-label">Royalty Rates</div>
+  <div class="note note-g" style="margin-bottom:14px">Enter whole numbers only — <strong>10</strong> = 10%, <strong>25</strong> = 25%. Select the royalty basis from the dropdown. Leave blank for formats not yet in use.</div>
+  <div style="margin-bottom:20px" id="rate-rows">
+    <div class="rate-row"><div style="font-size:12px"><span class="fmt fmt-pb">Paperback</span></div><div class="rate-inputs"><select id="basis-pb" style="width:130px;padding:7px 10px;font-size:11px"><option value="retail">Retail sale</option><option value="wholesale">Wholesale</option><option value="net" selected>Net sale</option></select><input type="number" id="rate-pb" placeholder="e.g. 10" min="0" max="100" step="0.1" style="width:80px"/><span style="font-size:13px;color:var(--dim);font-weight:500">%</span></div></div>
+    <div class="rate-row"><div style="font-size:12px"><span class="fmt fmt-hc">Hardcover</span></div><div class="rate-inputs"><select id="basis-hc" style="width:130px;padding:7px 10px;font-size:11px"><option value="retail">Retail sale</option><option value="wholesale">Wholesale</option><option value="net" selected>Net sale</option></select><input type="number" id="rate-hc" placeholder="e.g. 10" min="0" max="100" step="0.1" style="width:80px"/><span style="font-size:13px;color:var(--dim);font-weight:500">%</span></div></div>
+    <div class="rate-row"><div style="font-size:12px"><span class="fmt fmt-lp">Large Print</span></div><div class="rate-inputs"><select id="basis-lp" style="width:130px;padding:7px 10px;font-size:11px"><option value="retail">Retail sale</option><option value="wholesale">Wholesale</option><option value="net" selected>Net sale</option></select><input type="number" id="rate-lp" placeholder="e.g. 10" min="0" max="100" step="0.1" style="width:80px"/><span style="font-size:13px;color:var(--dim);font-weight:500">%</span></div></div>
+    <div class="rate-row"><div style="font-size:12px"><span class="fmt fmt-eb">Ebook</span></div><div class="rate-inputs"><select id="basis-eb" style="width:130px;padding:7px 10px;font-size:11px"><option value="retail">Retail sale</option><option value="wholesale">Wholesale</option><option value="net" selected>Net sale</option></select><input type="number" id="rate-eb" placeholder="e.g. 25" min="0" max="100" step="0.1" style="width:80px"/><span style="font-size:13px;color:var(--dim);font-weight:500">%</span></div></div>
+    <div class="rate-row"><div style="font-size:12px"><span class="fmt fmt-ab">Audiobook</span></div><div class="rate-inputs"><select id="basis-ab" style="width:130px;padding:7px 10px;font-size:11px"><option value="retail">Retail sale</option><option value="wholesale">Wholesale</option><option value="net" selected>Net sale</option></select><input type="number" id="rate-ab" placeholder="e.g. 20" min="0" max="100" step="0.1" style="width:80px"/><span style="font-size:13px;color:var(--dim);font-weight:500">%</span></div></div>
+  </div>
+  <hr>
+  <div class="sub-label">Contributors &amp; Splits</div>
+  <div class="note note-i" style="margin-bottom:14px">For a sole author, leave Royalty Share blank (defaults to 100%). For co-authors, shares must total 100%.</div>
+  <div id="contrib-list"></div>
+  <button class="btn-add" onclick="addContrib()">+ Add Author / Contributor</button>
+  <div class="split-tally" id="split-tally">
+    <span style="color:var(--dim)">Total share allocated</span>
+    <span class="split-n ok" id="split-tot">100%</span>
+  </div>
+  <hr>
+  <div class="sub-label">Financial Terms <span style="font-size:9px;color:var(--mut);text-transform:none;font-style:italic;font-weight:300"> — fill in what is known</span></div>
+  <div class="form-grid g3">
+    <div class="f"><label>Advance Paid <span class="opt">optional</span></label>
+      <input type="number" id="nt-advance" placeholder="0.00" min="0" step="0.01" />
+      <div class="hint">Total advance against royalties</div></div>
+    <div class="f"><label>Minimum Payout <span class="opt">optional</span></label>
+      <input type="number" id="nt-minpay" placeholder="e.g. 25.00" min="0" step="0.01" />
+      <div class="hint">Hold payment below this amount</div></div>
+    <div class="f"><label>Print Cost / Book <span class="opt">optional</span></label>
+      <input type="number" id="nt-printcost" placeholder="e.g. 4.50" min="0" step="0.01" /></div>
+    <div class="f"><label>Shipping Cost / Book <span class="opt">optional</span></label>
+      <input type="number" id="nt-shipcost" placeholder="e.g. 1.20" min="0" step="0.01" /></div>
+    <div class="f"><label>Who Paid Print Costs <span class="opt">optional</span></label>
+      <select id="nt-whopaid"><option value="">— Select —</option>
+        <option>Publisher</option><option>Author</option><option>Split</option><option>N/A</option></select></div>
+  </div>
+  <hr>
+  <div class="f"><label>Notes <span class="opt">optional</span></label>
+    <textarea id="nt-notes" rows="3" placeholder="Anything else Mocenius should know about this title or contract…"></textarea></div>
+</div>
+
+<!-- UPDATE TITLE -->
+<div class="panel" id="panel-update-title">
+  <div class="sec-hdr">
+    <div class="sec-title">Update <em>Title</em></div>
+    <div class="sec-sub">Select the title to update, then fill in only the fields that are changing.</div>
+  </div>
+  <div class="record-sel-wrap">
+    <div class="record-sel-label">Select Title</div>
+    <select id="ut-sel" onchange="onTitleSelect('ut')">
+      <option value="">— Select a title —</option>
+    </select>
+    <div class="record-preview" id="ut-preview">
+      <div class="record-preview-row"><span class="rpr-key">Title ID</span><span class="rpr-val" id="ut-prev-id">—</span></div>
+      <div class="record-preview-row"><span class="rpr-key">On Sale Date</span><span class="rpr-val" id="ut-prev-date">—</span></div>
+      <div class="record-preview-row"><span class="rpr-key">Status</span><span class="rpr-val" id="ut-prev-status">—</span></div>
+    </div>
+  </div>
+  <div class="note note-i">Fill in only the fields that are changing. Leave everything else blank.</div>
+  <div class="form-grid g2" style="margin-bottom:20px">
+    <div class="f s2"><label>New Title Text <span class="opt">if changing</span></label>
+      <input type="text" id="ut-title" placeholder="Corrected or updated title" /></div>
+    <div class="f s2"><label>New Subtitle <span class="opt">if changing</span></label>
+      <input type="text" id="ut-sub" placeholder="Corrected or updated subtitle" /></div>
+    <div class="f"><label>New On Sale Date <span class="opt">if changing</span></label>
+      <input type="date" id="ut-date" /></div>
+    <div class="f"><label>New Status <span class="opt">if changing</span></label>
+      <select id="ut-status"><option value="">— No change —</option>
+        <option>Active</option><option>Out of Print</option><option>Cancelled</option></select></div>
+    <div class="f"><label>New Advance Amount <span class="opt">if changing</span></label>
+      <input type="number" id="ut-advance" placeholder="Updated total" min="0" step="0.01" /></div>
+    <div class="f"><label>New Minimum Payout <span class="opt">if changing</span></label>
+      <input type="number" id="ut-minpay" placeholder="Updated threshold" min="0" step="0.01" /></div>
+    <div class="f"><label>New Print Cost / Book <span class="opt">if changing</span></label>
+      <input type="number" id="ut-printcost" placeholder="Updated cost" min="0" step="0.01" /></div>
+    <div class="f"><label>New Shipping Cost / Book <span class="opt">if changing</span></label>
+      <input type="number" id="ut-shipcost" placeholder="Updated cost" min="0" step="0.01" /></div>
+  </div>
+  <div class="f" style="margin-bottom:16px"><label>Notes <span class="opt">optional</span></label>
+    <textarea id="ut-notes" rows="2" placeholder="Describe what is changing and why…"></textarea></div>
+</div>
+
+<!-- NEW ISBN -->
+<div class="panel" id="panel-new-isbn">
+  <div class="sec-hdr">
+    <div class="sec-title">New Format / <em>ISBN</em></div>
+    <div class="sec-sub">Select the title this format belongs to — all other details are inherited automatically.</div>
+  </div>
+  <div class="record-sel-wrap">
+    <div class="record-sel-label">Select Title</div>
+    <select id="ni-title-sel" onchange="onTitleSelect('ni')">
+      <option value="">— Select a title —</option>
+    </select>
+    <div class="record-preview" id="ni-preview">
+      <div class="record-preview-row"><span class="rpr-key">Title ID</span><span class="rpr-val" id="ni-prev-id">—</span></div>
+      <div class="record-preview-row"><span class="rpr-key">Contact</span><span class="rpr-val" id="ni-prev-contact">—</span></div>
+      <div class="record-preview-row"><span class="rpr-key">Existing ISBNs</span><span class="rpr-val" id="ni-prev-isbns">—</span></div>
+    </div>
+  </div>
+  <div class="form-grid g2">
+    <div class="f"><label>Format <span class="req">●</span></label>
+      <select id="ni-fmt" onchange="lv(this)"><option value="">— Select format —</option>
+        <option>Paperback</option><option>Hardcover</option><option>Large Print</option>
+        <option>Ebook</option><option>Audiobook</option></select>
+      <div class="err-msg">Required</div></div>
+    <div class="f"><label>ISBN-13 or ASIN <span class="req">●</span></label>
+      <input type="text" id="ni-isbn" placeholder="978… or B0XXXXXXXX" oninput="lv(this)" maxlength="30" />
+      <div class="err-msg">Required</div></div>
+    <div class="f"><label>On Sale Date <span class="req">●</span></label>
+      <input type="date" id="ni-date" oninput="lv(this)" />
+      <div class="err-msg">Required</div></div>
+    <div class="f"><label>Royalty Rate <span class="opt">if different from other formats</span></label>
+      <div style="display:flex;align-items:center;gap:8px">
+        <select id="ni-basis" style="flex:1;padding:9px 10px;font-size:12px"><option value="retail">Retail sale</option><option value="wholesale">Wholesale</option><option value="net" selected>Net sale</option></select>
+        <input type="number" id="ni-rate" placeholder="e.g. 25" min="0" max="100" step="0.1" style="width:80px" />
+        <span style="font-size:13px;color:var(--dim);font-weight:500">%</span>
+      </div></div>
+    <div class="f s2"><label>Notes <span class="opt">optional</span></label>
+      <textarea id="ni-notes" rows="2" placeholder="Any additional details…"></textarea></div>
+  </div>
+</div>
+
+<!-- UPDATE ISBN -->
+<div class="panel" id="panel-update-isbn">
+  <div class="sec-hdr">
+    <div class="sec-title">Update <em>ISBN</em></div>
+    <div class="sec-sub">Correct an ISBN, change a sale date, or retire a format. Select the title first, then the specific ISBN.</div>
+  </div>
+  <div class="record-sel-wrap">
+    <div class="record-sel-label">Select Title</div>
+    <select id="ui-title-sel" onchange="onTitleSelect('ui')">
+      <option value="">— Select a title —</option>
+    </select>
+  </div>
+  <div class="record-sel-wrap" id="ui-isbn-wrap" style="display:none">
+    <div class="record-sel-label">Select ISBN / Format</div>
+    <select id="ui-isbn-sel" onchange="onIsbnSelect()">
+      <option value="">— Select a format —</option>
+    </select>
+    <div class="record-preview" id="ui-preview">
+      <div class="record-preview-row"><span class="rpr-key">Current ISBN</span><span class="rpr-val" id="ui-prev-isbn">—</span></div>
+      <div class="record-preview-row"><span class="rpr-key">Format</span><span class="rpr-val" id="ui-prev-fmt">—</span></div>
+      <div class="record-preview-row"><span class="rpr-key">On Sale Date</span><span class="rpr-val" id="ui-prev-date">—</span></div>
+      <div class="record-preview-row"><span class="rpr-key">Status</span><span class="rpr-val" id="ui-prev-status">—</span></div>
+    </div>
+  </div>
+  <div id="ui-fields" style="display:none">
+    <div class="note note-i">Fill in only the fields that are changing.</div>
+    <div class="form-grid g2">
+      <div class="f"><label>Corrected ISBN / ASIN <span class="opt">if changing</span></label>
+        <input type="text" id="ui-isbn" placeholder="Corrected ISBN or ASIN" maxlength="30" /></div>
+      <div class="f"><label>New On Sale Date <span class="opt">if changing</span></label>
+        <input type="date" id="ui-date" /></div>
+      <div class="f"><label>New Status <span class="opt">if changing</span></label>
+        <select id="ui-status"><option value="">— No change —</option>
+          <option>Active</option><option>Retired</option><option>Out of Print</option></select></div>
+      <div class="f s2"><label>Notes <span class="opt">optional</span></label>
+        <textarea id="ui-notes" rows="2" placeholder="Describe the correction or change…"></textarea></div>
+    </div>
+  </div>
+</div>
+
+<!-- ROYALTY RATE CHANGE -->
+<div class="panel" id="panel-royalty-rate">
+  <div class="sec-hdr">
+    <div class="sec-title">Royalty Rate <em>Change</em></div>
+    <div class="sec-sub">Update the royalty rate for one or more formats on an existing title. Takes effect from the next reporting period.</div>
+  </div>
+  <div class="record-sel-wrap">
+    <div class="record-sel-label">Select Title</div>
+    <select id="rr-title-sel" onchange="onTitleSelect('rr')">
+      <option value="">— Select a title —</option>
+    </select>
+    <div class="record-preview" id="rr-preview">
+      <div class="record-preview-row"><span class="rpr-key">Title ID</span><span class="rpr-val" id="rr-prev-id">—</span></div>
+      <div class="record-preview-row"><span class="rpr-key">Current Rates</span><span class="rpr-val" id="rr-prev-rates">—</span></div>
+    </div>
+  </div>
+  <div class="note note-i">Enter the new rate only for formats that are changing. Leave blank for formats staying the same.</div>
+  <div style="margin-bottom:20px">
+    <div class="rate-row"><div style="font-size:12px"><span class="fmt fmt-pb">Paperback</span></div><div class="rate-inputs"><input type="number" id="rr-r-pb" placeholder="New %" min="0" max="100" step="0.1" style="width:80px"/><span style="font-size:13px;color:var(--dim);font-weight:500">%</span></div></div>
+    <div class="rate-row"><div style="font-size:12px"><span class="fmt fmt-hc">Hardcover</span></div><div class="rate-inputs"><input type="number" id="rr-r-hc" placeholder="New %" min="0" max="100" step="0.1" style="width:80px"/><span style="font-size:13px;color:var(--dim);font-weight:500">%</span></div></div>
+    <div class="rate-row"><div style="font-size:12px"><span class="fmt fmt-lp">Large Print</span></div><div class="rate-inputs"><input type="number" id="rr-r-lp" placeholder="New %" min="0" max="100" step="0.1" style="width:80px"/><span style="font-size:13px;color:var(--dim);font-weight:500">%</span></div></div>
+    <div class="rate-row"><div style="font-size:12px"><span class="fmt fmt-eb">Ebook</span></div><div class="rate-inputs"><input type="number" id="rr-r-eb" placeholder="New %" min="0" max="100" step="0.1" style="width:80px"/><span style="font-size:13px;color:var(--dim);font-weight:500">%</span></div></div>
+    <div class="rate-row"><div style="font-size:12px"><span class="fmt fmt-ab">Audiobook</span></div><div class="rate-inputs"><input type="number" id="rr-r-ab" placeholder="New %" min="0" max="100" step="0.1" style="width:80px"/><span style="font-size:13px;color:var(--dim);font-weight:500">%</span></div></div>
+  </div>
+  <div class="form-grid g2">
+    <div class="f"><label>Effective From <span class="opt">optional</span></label>
+      <input type="date" id="rr-effective" /><div class="hint">Defaults to next reporting period</div></div>
+    <div class="f"><label>Notes <span class="opt">optional</span></label>
+      <textarea id="rr-notes" rows="3" placeholder="Reason for rate change…"></textarea></div>
+  </div>
+</div>
+
+<!-- ROYALTY SPLIT / PAYEE CHANGE -->
+<div class="panel" id="panel-royalty-split">
+  <div class="sec-hdr">
+    <div class="sec-title">Royalty Split &amp; <em>Payee</em></div>
+    <div class="sec-sub">Change how royalties are divided between payees, or substitute a payee entirely.</div>
+  </div>
+  <div class="record-sel-wrap">
+    <div class="record-sel-label">Select Title</div>
+    <select id="rs-title-sel" onchange="onTitleSelect('rs')">
+      <option value="">— Select a title —</option>
+    </select>
+  </div>
+  <div class="f" style="margin-bottom:20px"><label>What is changing? <span class="req">●</span></label>
+    <select id="rs-type" onchange="onRsTypeChange()">
+      <option value="">— Select —</option>
+      <option value="split">Royalty split between payees</option>
+      <option value="payee">Substitute a payee (death, legal transfer, etc.)</option>
+      <option value="both">Both split and payee</option>
+    </select></div>
+  <div id="rs-split-sec" style="display:none">
+    <div class="sub-label">New Royalty Split</div>
+    <div class="note note-i" style="margin-bottom:14px">List every payee with their new share. All shares must total 100%.</div>
+    <div id="split-rows"></div>
+    <button class="btn-add" onclick="addSplitRow()" style="margin-bottom:8px">+ Add Payee</button>
+    <div class="split-tally"><span style="color:var(--dim)">Total allocated</span><span class="split-n bad" id="rs-split-tot">0%</span></div>
+  </div>
+  <div id="rs-payee-sec" style="display:none">
+    <hr><div class="sub-label">Payee Substitution</div>
+    <div class="note note-w" style="margin-bottom:14px">This type of change requires supporting documentation. Mocenius will contact you after submission.</div>
+    <div class="form-grid g2">
+      <div class="f"><label>Current Payee — First Name</label><input type="text" id="rs-old-fn" placeholder="Current payee" /></div>
+      <div class="f"><label>Current Payee — Last Name</label><input type="text" id="rs-old-ln" placeholder="Current payee" /></div>
+      <div class="f"><label>New Payee — First Name</label><input type="text" id="rs-new-fn" placeholder="Replacement" /></div>
+      <div class="f"><label>New Payee — Last Name</label><input type="text" id="rs-new-ln" placeholder="Replacement" /></div>
+      <div class="f s2"><label>New Payee — Email</label><input type="email" id="rs-new-email" placeholder="email@example.com" /></div>
+      <div class="f s2"><label>Reason</label>
+        <select id="rs-payee-reason"><option value="">— Select —</option>
+          <option>Author deceased — estate transfer</option>
+          <option>Author deceased — writing partner transfer</option>
+          <option>Legal / contractual transfer</option><option>Divorce settlement</option>
+          <option>Business restructure</option><option>Other</option></select></div>
+    </div>
+  </div>
+  <hr>
+  <div class="form-grid g2">
+    <div class="f"><label>Effective From <span class="opt">optional</span></label>
+      <input type="date" id="rs-effective" /><div class="hint">Defaults to next reporting period</div></div>
+    <div class="f"><label>Notes <span class="opt">optional</span></label>
+      <textarea id="rs-notes" rows="3" placeholder="Any additional context…"></textarea></div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════
+     STEP 4 — REVIEW
+══════════════════════════════════════ -->
+<div class="panel" id="panel-4">
+  <div class="sec-hdr">
+    <div class="sec-title">Review &amp; <em>Submit</em></div>
+    <div class="sec-sub">Please review your submission carefully. Use the Back button to make corrections. Submitting will download your updated data file.</div>
+  </div>
+  <div id="review-content"></div>
+  <div class="note note-g" style="margin-top:20px">By submitting you confirm this information is accurate and authorised. Your updated publisher data file will download automatically — please save it to your Data Vault.</div>
+</div>
+
+<!-- SUCCESS -->
+<div class="panel" id="panel-success">
+  <div class="success-wrap">
+    <div class="success-icon">✓</div>
+    <div class="success-title">Submission complete</div>
+    <div class="success-sub" id="success-msg"></div>
+    <div style="display:flex;gap:12px;justify-content:center;flex-wrap:wrap">
+      <button class="btn btn-gold" onclick="dlAgain()">⬇ Download Again</button>
+      <button class="btn btn-ol" onclick="location.reload()">Submit Another Update</button>
+    </div>
+  </div>
+</div>
+
+</div><!-- /wrap -->
+
+<div class="bar" id="bar">
+  <div class="bar-dots">
+    <div class="bdot active" id="dot-0"></div>
+    <div class="bdot" id="dot-1"></div>
+    <div class="bdot" id="dot-2"></div>
+    <div class="bdot" id="dot-3"></div>
+    <div class="bdot" id="dot-4"></div>
+  </div>
+  <div class="bar-btns">
+    <button class="btn btn-ol" id="btn-back" onclick="goBack()" style="display:none">← Back</button>
+    <button class="btn btn-gold" id="btn-next" onclick="goNext()" disabled>Continue →</button>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<button class="log-toggle" onclick="toggleLog()">
+  ◈ Activity Log <span class="log-count" id="log-count" style="display:none">0</span>
+</button>
+
+<div class="log-drawer" id="log-drawer">
+  <div class="log-drawer-hdr">
+    <div class="log-drawer-title"><em>Activity</em> Log</div>
+    <div style="display:flex;gap:8px;align-items:center">
+      <button class="btn btn-ol" onclick="exportLog()" style="font-size:10px;padding:6px 14px">Download Log</button>
+      <button class="log-close" onclick="toggleLog()">×</button>
+    </div>
+  </div>
+  <div class="log-body">
+    <table class="log-table">
+      <thead><tr><th>Date &amp; Time</th><th>Reference</th><th>Type</th><th>Detail</th><th>Submitter</th><th>File</th></tr></thead>
+      <tbody id="log-tbody"></tbody>
+    </table>
+    <div class="log-empty" id="log-empty">No submissions recorded yet on this device.</div>
+  </div>
+</div>
+
+<script>
+
+// ══════════════════════════════════════════
+// CLIENT CONFIG — DO NOT EDIT
+// Generated by Mocenius for Ingenium Books
+// ══════════════════════════════════════════
+const CLIENT_CONFIG = {
+  code:     'INGEN',
+  name:     'Ingenium Books',
+  currency: 'CAD',
+  vault:    '01-INGEN-DATA VAULT / 01-INGEN TO RMS / 01-AUTHOR TITLE UPDATES',
+  contact:  'info@mocenius.com',
+  version:  'v2',
+  generated: '2026-03-28',
+};
+
+'use strict';
+
+// ══════════════════════════════════════════
+// APPLY CLIENT CONFIG
+// ══════════════════════════════════════════
+function applyClientConfig() {
+  if (typeof CLIENT_CONFIG === 'undefined') return;
+
+  // Update page title and header
+  document.title = CLIENT_CONFIG.name + ' · Publisher Update — Mocenius';
+  const hdrRef = document.getElementById('hdr-ref');
+  if (hdrRef) hdrRef.textContent = CLIENT_CONFIG.name + ' · ' + CLIENT_CONFIG.code;
+
+  // Pre-fill Your Details fields from config
+  // (only if not already recalled from localStorage or master file)
+  const saved = loadIdentity();
+  if (!saved || !saved.fn) {
+    // No saved identity — pre-fill company and currency from config
+    const coEl = document.getElementById('sub-co');
+    const curEl = document.getElementById('sub-cur');
+    if (coEl && !coEl.value) coEl.value = CLIENT_CONFIG.name;
+    if (curEl && !curEl.value) curEl.value = CLIENT_CONFIG.currency;
+  }
+
+  // Update the load zone hint text with client-specific filename
+  const loadSub = document.querySelector('.load-sub');
+  if (loadSub) {
+    loadSub.innerHTML = 'Your file is named <strong>' + CLIENT_CONFIG.code +
+      '-PublisherData.xlsx</strong><br>Find it in your Dropbox Data Vault folder';
+  }
+
+  // Update the vault path on success screen (also updated dynamically on submit)
+  master.clientCode = CLIENT_CONFIG.code;
+
+  // Pre-set currency for new contacts/titles when no master file loaded
+  const curSel = document.getElementById('sub-cur');
+  if (curSel && !curSel.value) curSel.value = CLIENT_CONFIG.currency;
+}
+
+
+// ══════════════════════════════════════════
+// STATE
+// ══════════════════════════════════════════
+let step = 0;
+let selCat = '';     // contact | title | isbn
+let selAction = '';  // new | update | rate | split
+let selType = '';    // panel id suffix e.g. 'new-contact'
+let cCount = 0;
+let srCount = 0;
+let lastWb = null, lastFn = null;
+let isFresh = false;
+
+let master = {
+  contacts:[], titles:[], products:[], contributors:[], log:[],
+  loaded:false, filename:'', clientCode:''
+};
+
+const TYPE_LABELS = {
+  'new-contact':'New Contact','update-contact':'Update Contact',
+  'new-title':'New Title','update-title':'Update Title',
+  'new-isbn':'New Format / ISBN','update-isbn':'Update ISBN',
+  'royalty-rate':'Royalty Rate Change','royalty-split':'Royalty Split / Payee',
+};
+const TYPE_PILL = {
+  'new-contact':'ltp-nc','update-contact':'ltp-uc',
+  'new-title':'ltp-nt','update-title':'ltp-ut',
+  'new-isbn':'ltp-ni','update-isbn':'ltp-ui',
+  'royalty-rate':'ltp-rr','royalty-split':'ltp-rs',
+};
+
+// ══════════════════════════════════════════
+// ID GENERATOR
+// ══════════════════════════════════════════
+function nameCode(fn, ln) {
+  fn = (fn||'').trim();
+  ln = (ln||'').replace(/-/g,'').trim();
+  if (!fn || !ln) return '????';
+  return (fn[0]+fn[fn.length-1]+ln[0]+ln[ln.length-1]).toUpperCase();
+}
+
+function nextContactSerial(code) {
+  let max = 0;
+  master.contacts.forEach(c => {
+    if ((c.contact_id||'').startsWith(code)) {
+      const n = parseInt((c.contact_id||'').slice(4));
+      if (!isNaN(n) && n > max) max = n;
+    }
+  });
+  return String(max+1).padStart(4,'0');
+}
+
+function nextTitleSerial(contactId) {
+  const prefix = 'CT'+contactId;
+  let max = 0;
+  master.titles.forEach(t => {
+    if ((t.title_id||'').startsWith(prefix)) {
+      const n = parseInt((t.title_id||'').slice(prefix.length));
+      if (!isNaN(n) && n > max) max = n;
+    }
+  });
+  return String(max+1).padStart(4,'0');
+}
+
+function buildContactId(fn, ln) {
+  const code = nameCode(fn, ln);
+  // Check if already exists by email
+  const email = g('sub-email').toLowerCase();
+  if (email) {
+    const ex = master.contacts.find(c => (c.email||'').toLowerCase()===email);
+    if (ex && ex.contact_id) return ex.contact_id;
+  }
+  return code + nextContactSerial(code);
+}
+
+function buildTitleId(contactId) {
+  return 'CT' + contactId + nextTitleSerial(contactId);
+}
+
+function previewContactId() {
+  const fn = g('sub-fn'), ln = g('sub-ln');
+  const el = document.getElementById('gen-id-val');
+  const prev = document.getElementById('contact-id-preview');
+  if (!fn || !ln) { if(prev) prev.style.display='none'; return; }
+  if(el) el.textContent = nameCode(fn,ln)+'0001';
+  if(prev) prev.style.display='block';
+}
+
+function updateNcId() {
+  const fn = g('nc-fn'), ln = g('nc-ln');
+  const el = document.getElementById('nc-id-val');
+  const prev = document.getElementById('nc-id-preview');
+  if (!fn || !ln) { if(prev) prev.style.display='none'; return; }
+  const code = nameCode(fn,ln);
+  const serial = nextContactSerial(code);
+  if(el) el.textContent = code+serial;
+  if(prev) prev.style.display='block';
+}
+
+// ══════════════════════════════════════════
+// NAVIGATION
+// ══════════════════════════════════════════
+const TOTAL_STEPS = 5;
+
+function showStep(n) {
+  step = n;
+  document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
+
+  let panelId;
+  if      (n===0) panelId='panel-0';
+  else if (n===1) panelId='panel-1';
+  else if (n===2) panelId='panel-2';
+  else if (n===3) panelId='panel-'+selType;
+  else if (n===4) { buildReview(); panelId='panel-4'; }
+  else            panelId='panel-success';
+
+  const panel = document.getElementById(panelId);
+  if (panel) panel.classList.add('active');
+
+  // Step tabs
+  for (let i=0;i<TOTAL_STEPS;i++) {
+    const t=document.getElementById('stab-'+i);
+    const sn=document.getElementById('sn-'+i);
+    if (!t) continue;
+    t.classList.remove('active','done');
+    if (i<n) { t.classList.add('done'); sn.textContent='✓'; }
+    else if (i===n) { t.classList.add('active'); sn.textContent=i+1; }
+    else sn.textContent=i+1;
+  }
+  // Dots
+  for (let i=0;i<TOTAL_STEPS;i++) {
+    const d=document.getElementById('dot-'+i);
+    if(!d)return;
+    d.className='bdot';
+    if(i<n)d.classList.add('done');
+    else if(i===n)d.classList.add('active');
+  }
+
+  const bar=document.getElementById('bar');
+  const bb=document.getElementById('btn-back');
+  const bn=document.getElementById('btn-next');
+  if (n>=5){bar.style.display='none';return;}
+  bar.style.display='flex';
+  bb.style.display=n>0?'inline-flex':'none';
+  if (n===4){bn.textContent='⬇ Download & Submit';bn.className='btn btn-green';bn.disabled=false;}
+  else {bn.textContent='Continue →';bn.className='btn btn-gold';bn.disabled=!canGo(n);}
+  window.scrollTo({top:0,behavior:'smooth'});
+}
+
+function goNext(){if(step===4){doSubmit();return;}if(!validate(step))return;showStep(step+1);}
+function goBack(){showStep(step-1);}
+function canGo(n){
+  if(n===0)return master.loaded||isFresh;
+  if(n===1)return !!selType;
+  return true;
+}
+
+// ══════════════════════════════════════════
+// FILE LOAD
+// ══════════════════════════════════════════
+function initLoadZone() {
+  const dz=document.getElementById('load-zone');
+  const fi=document.getElementById('load-fi');
+  dz.addEventListener('dragover',e=>{e.preventDefault();dz.classList.add('over');});
+  dz.addEventListener('dragleave',()=>dz.classList.remove('over'));
+  dz.addEventListener('drop',e=>{e.preventDefault();dz.classList.remove('over');const f=e.dataTransfer.files[0];if(f)loadFile(f);});
+  fi.addEventListener('change',()=>{if(fi.files[0])loadFile(fi.files[0]);fi.value='';});
+}
+
+function loadFile(file) {
+  const st=document.getElementById('load-status');
+  st.style.display='block';st.className='load-status note note-i';st.textContent='Reading file…';
+  const reader=new FileReader();
+  reader.onload=e=>{
+    try {
+      const wb=XLSX.read(e.target.result,{type:'array'});
+      const sheets=wb.SheetNames;
+      if(!sheets.includes('CONTACTS')||!sheets.includes('TITLES')){
+        st.className='load-status note note-w';
+        st.textContent='This doesn\'t look like a Mocenius publisher data file. Please check and try again.';
+        return;
+      }
+      // Our template structure: row 1 = section band, row 2 = headers, row 3 = hints, row 4+ = data
+      // sheet_to_json with range skips to the right rows
+      const rs = name => {
+        if (!sheets.includes(name)) return [];
+        const ws = wb.Sheets[name];
+        // Read headers from row 2 (index 1), data from row 4 (index 3)
+        const raw = XLSX.utils.sheet_to_json(ws, {header:1, defval:''});
+        if (raw.length < 4) return [];
+        const headers = raw[1].map(h => String(h||'').trim()); // row 2 = real headers
+        const dataRows = raw.slice(3); // row 4 onward = real data (skip hints row 3)
+        return dataRows
+          .filter(r => r.some(v => v !== '')) // skip blank rows
+          .map(r => {
+            const obj = {};
+            headers.forEach((h, i) => { if (h) obj[h] = r[i] === undefined ? '' : r[i]; });
+            return obj;
+          });
+      };
+      // LOG has no section band — just headers in row 1, hints in row 2, data from row 3
+      const rsLog = () => {
+        if (!sheets.includes('LOG')) return [];
+        const ws = wb.Sheets['LOG'];
+        const raw = XLSX.utils.sheet_to_json(ws, {header:1, defval:''});
+        if (raw.length < 2) return [];
+        const headers = raw[0].map(h => String(h||'').trim());
+        return raw.slice(2).filter(r=>r.some(v=>v!=='')).map(r=>{
+          const obj={};
+          headers.forEach((h,i)=>{if(h)obj[h]=r[i]===undefined?'':r[i];});
+          return obj;
+        });
+      };
+      master.contacts=rs('CONTACTS');
+      master.titles=rs('TITLES');
+      master.products=rs('PRODUCTS');
+      master.contributors=rs('CONTRIBUTORS');
+      master.log=rsLog();
+      master.loaded=true;
+      master.filename=file.name;
+      master.clientCode=file.name.split('-')[0].toUpperCase();
+
+      const nNew=t=>t.filter(r=>(r.status||'').toUpperCase()==='NEW').length;
+      st.className='load-status note note-g';
+      st.innerHTML=`<strong>${file.name}</strong> loaded &nbsp;·&nbsp; ${master.contacts.length} contacts &nbsp;·&nbsp; ${master.titles.length} titles &nbsp;·&nbsp; ${master.products.length} ISBNs`;
+
+      // Update stats panel
+      document.getElementById('master-stats').style.display='block';
+      document.getElementById('stat-contacts').textContent=master.contacts.length;
+      document.getElementById('stat-titles').textContent=master.titles.length;
+      document.getElementById('stat-isbns').textContent=master.products.length;
+      const nc=nNew(master.contacts),nt=nNew(master.titles),ni=nNew(master.products);
+      document.getElementById('stat-contacts-new').textContent=nc?nc+' awaiting import':'';
+      document.getElementById('stat-titles-new').textContent=nt?nt+' awaiting import':'';
+      document.getElementById('stat-isbns-new').textContent=ni?ni+' awaiting import':'';
+
+      populateAllDropdowns();
+      tryRecall();
+      document.getElementById('btn-next').disabled=false;
+    } catch(err){
+      st.className='load-status note note-w';
+      st.textContent='Could not read file: '+err.message;
+    }
+  };
+  reader.readAsArrayBuffer(file);
+}
+
+function startFresh(){isFresh=true;master.loaded=false;tryRecall();document.getElementById('btn-next').disabled=false;showStep(1);}
+
+// ══════════════════════════════════════════
+// POPULATE DROPDOWNS FROM MASTER
+// ══════════════════════════════════════════
+function populateAllDropdowns() {
+  // Contacts
+  const contactOpts = master.contacts.map(c=>({
+    id: c.contact_id||'',
+    name: ((c.first_name||'')+' '+(c.last_name||'')).trim()||(c.email||''),
+  })).filter(c=>c.name);
+
+  ['nt-contact-sel','uc-sel'].forEach(id=>{
+    const sel=document.getElementById(id);
+    if(!sel)return;
+    while(sel.options.length>1)sel.remove(1);
+    contactOpts.forEach(c=>{
+      const o=document.createElement('option');
+      o.value=c.id||c.name;
+      o.textContent=c.name+(c.id?' ['+c.id+']':'');
+      sel.appendChild(o);
+    });
+  });
+
+  // Titles
+  const titleOpts = master.titles.map(t=>({
+    id: t.title_id||'',
+    name: t.title||t.Title||'',
+  })).filter(t=>t.name);
+
+  ['ni-title-sel','ut-sel','ui-title-sel','rr-title-sel','rs-title-sel'].forEach(id=>{
+    const sel=document.getElementById(id);
+    if(!sel)return;
+    while(sel.options.length>1)sel.remove(1);
+    titleOpts.forEach(t=>{
+      const o=document.createElement('option');
+      o.value=t.id||t.name;
+      o.textContent=t.name+(t.id?' ['+t.id+']':'');
+      sel.appendChild(o);
+    });
+  });
+}
+
+// ══════════════════════════════════════════
+// RECORD SELECTION HANDLERS
+// ══════════════════════════════════════════
+function onContactSelect() {
+  const sel=document.getElementById('uc-sel');
+  const val=sel.value;
+  if(!val){document.getElementById('uc-preview').style.display='none';return;}
+  const c=master.contacts.find(c=>c.contact_id===val||(c.first_name+' '+c.last_name).trim()===val);
+  if(!c){document.getElementById('uc-preview').style.display='none';return;}
+  document.getElementById('uc-prev-id').textContent=c.contact_id||'—';
+  document.getElementById('uc-prev-email').textContent=c.email||'—';
+  document.getElementById('uc-prev-role').textContent=c.persona||c.role||'—';
+  document.getElementById('uc-prev-status').textContent=c.status||'—';
+  document.getElementById('uc-preview').style.display='block';
+}
+
+function onTitleSelect(prefix) {
+  const sel=document.getElementById(prefix+'-title-sel');
+  if(!sel)return;
+  const val=sel.value;
+
+  // Update-title preview
+  if(prefix==='ut'){
+    const t=master.titles.find(t=>t.title_id===val||t.title===val);
+    const prev=document.getElementById('ut-preview');
+    if(t){
+      document.getElementById('ut-prev-id').textContent=t.title_id||'—';
+      document.getElementById('ut-prev-date').textContent=t.on_sale_date||'—';
+      document.getElementById('ut-prev-status').textContent=t.status||'—';
+      prev.style.display='block';
+    } else prev.style.display='none';
+  }
+
+  // New ISBN — show existing ISBNs for this title
+  if(prefix==='ni'){
+    const t=master.titles.find(t=>t.title_id===val||t.title===val);
+    const prev=document.getElementById('ni-preview');
+    if(t){
+      const isbns=master.products.filter(p=>p.title_id===t.title_id||p.title===t.title);
+      document.getElementById('ni-prev-id').textContent=t.title_id||'—';
+      const contact=master.contacts.find(c=>c.contact_id===t.contact_id);
+      document.getElementById('ni-prev-contact').textContent=contact?((contact.first_name||'')+' '+(contact.last_name||'')).trim():'—';
+      document.getElementById('ni-prev-isbns').textContent=isbns.length?isbns.map(p=>p.format+': '+(p.isbn||'—')).join(' · '):'None on file yet';
+      prev.style.display='block';
+    } else prev.style.display='none';
+    lv(sel);
+  }
+
+  // Update ISBN — populate ISBN dropdown
+  if(prefix==='ui'){
+    const t=master.titles.find(t=>t.title_id===val||t.title===val);
+    const wrap=document.getElementById('ui-isbn-wrap');
+    const isbnSel=document.getElementById('ui-isbn-sel');
+    const fields=document.getElementById('ui-fields');
+    if(!t){wrap.style.display='none';fields.style.display='none';return;}
+    const isbns=master.products.filter(p=>p.title_id===t.title_id||p.title===t.title);
+    while(isbnSel.options.length>1)isbnSel.remove(1);
+    isbns.forEach(p=>{
+      const o=document.createElement('option');
+      o.value=p.isbn||p.format;
+      o.textContent=(p.format||'?')+': '+(p.isbn||'—');
+      isbnSel.appendChild(o);
+    });
+    wrap.style.display=isbns.length?'block':'none';
+    fields.style.display='none';
+  }
+
+  // Royalty rate — show current rates
+  if(prefix==='rr'){
+    const t=master.titles.find(t=>t.title_id===val||t.title===val);
+    const prev=document.getElementById('rr-preview');
+    if(t){
+      document.getElementById('rr-prev-id').textContent=t.title_id||'—';
+      const rates=['pb','hc','lp','eb','ab'].map(f=>{
+        const rate=t['rate_'+f];
+        return rate?(t['basis_'+f]||'net')+' '+rate+'%':'';
+      }).filter(Boolean);
+      document.getElementById('rr-prev-rates').textContent=rates.join(' · ')||'Not on file';
+      prev.style.display='block';
+    } else prev.style.display='none';
+  }
+}
+
+function onIsbnSelect() {
+  const sel=document.getElementById('ui-isbn-sel');
+  const val=sel.value;
+  const fields=document.getElementById('ui-fields');
+  if(!val){fields.style.display='none';return;}
+  const p=master.products.find(p=>p.isbn===val||p.format===val);
+  if(p){
+    document.getElementById('ui-prev-isbn').textContent=p.isbn||'—';
+    document.getElementById('ui-prev-fmt').textContent=p.format||'—';
+    document.getElementById('ui-prev-date').textContent=p.on_sale_date||'—';
+    document.getElementById('ui-prev-status').textContent=p.status||'—';
+    document.getElementById('ui-preview').style.display='block';
+  }
+  fields.style.display='block';
+}
+
+function onRsTypeChange(){
+  const v=document.getElementById('rs-type').value;
+  document.getElementById('rs-split-sec').style.display=(v==='split'||v==='both')?'block':'none';
+  document.getElementById('rs-payee-sec').style.display=(v==='payee'||v==='both')?'block':'none';
+  if((v==='split'||v==='both')&&!document.getElementById('split-rows').children.length){
+    addSplitRow();addSplitRow();
+  }
+}
+
+// ══════════════════════════════════════════
+// CATEGORY & ACTION SELECTION
+// ══════════════════════════════════════════
+const CAT_ACTIONS = {
+  contact:[
+    {type:'new-contact',   cls:'new-card', badge:'NEW',    icon:'👤+', label:'New Contact',        desc:'Register a new contributor'},
+    {type:'update-contact',cls:'upd-card', badge:'UPDATE', icon:'✏️', label:'Update Contact',       desc:'Change details for an existing contact'},
+  ],
+  title:[
+    {type:'new-title',     cls:'new-card', badge:'NEW',    icon:'📖+', label:'New Title',           desc:'Register a new book and contract'},
+    {type:'update-title',  cls:'upd-card', badge:'UPDATE', icon:'📝', label:'Update Title',         desc:'Correct or update an existing title record'},
+  ],
+  isbn:[
+    {type:'new-isbn',      cls:'new-card', badge:'NEW',    icon:'🔢+', label:'New Format / ISBN',   desc:'Add a new edition to an existing title'},
+    {type:'update-isbn',   cls:'upd-card', badge:'UPDATE', icon:'🔧', label:'Update ISBN',          desc:'Correct or retire an existing ISBN'},
+    {type:'royalty-rate',  cls:'upd-card', badge:'UPDATE', icon:'%',  label:'Royalty Rate Change',  desc:'Update rates for one or more formats'},
+    {type:'royalty-split', cls:'upd-card', badge:'UPDATE', icon:'⚖️', label:'Royalty Split / Payee','desc':'Change splits or substitute a payee'},
+  ],
+};
+
+function selectCat(cat) {
+  selCat=cat;
+  document.querySelectorAll('.sel-card[id^="cat-"]').forEach(c=>c.classList.remove('on'));
+  document.getElementById('cat-'+cat).classList.add('on');
+
+  const section=document.getElementById('action-section');
+  const grid=document.getElementById('action-grid');
+  const actions=CAT_ACTIONS[cat]||[];
+
+  // Resize grid
+  grid.style.gridTemplateColumns=actions.length===4?'1fr 1fr':'1fr 1fr';
+  grid.innerHTML=actions.map(a=>`
+    <div class="sel-card ${a.cls}" id="act-${a.type}" onclick="selectType('${a.type}')">
+      <span class="action-badge ${a.badge==='NEW'?'badge-new':'badge-upd'}">${a.badge}</span>
+      <span class="sc-icon">${a.icon}</span>
+      <span class="sc-label">${a.label}</span>
+      <span class="sc-desc">${a.desc}</span>
+    </div>`).join('');
+
+  section.style.display='block';
+  selType='';
+  document.getElementById('btn-next').disabled=true;
+  document.getElementById('type-note').style.display='none';
+}
+
+function selectType(type) {
+  selType=type;
+  document.querySelectorAll('[id^="act-"]').forEach(c=>c.classList.remove('on'));
+  const card=document.getElementById('act-'+type);
+  if(card)card.classList.add('on');
+  document.getElementById('stab3-label').textContent=TYPE_LABELS[type]||'Information';
+  document.getElementById('btn-next').disabled=false;
+  const notes={
+    'new-contact':'You\'re registering a <strong>new contributor</strong> — name, contact details, and role.',
+    'update-contact':'You\'re updating details for an <strong>existing contact</strong>. Fill in only what is changing.',
+    'new-title':'You\'re registering a <strong>new title</strong> with ISBNs, royalty rates, and contract terms.',
+    'update-title':'You\'re updating an <strong>existing title record</strong>. Fill in only what is changing.',
+    'new-isbn':'You\'re adding a <strong>new format edition</strong> to an existing title.',
+    'update-isbn':'You\'re correcting or retiring an <strong>existing ISBN</strong>.',
+    'royalty-rate':'You\'re updating <strong>royalty rates</strong> for one or more formats.',
+    'royalty-split':'You\'re changing a <strong>royalty split</strong> or substituting a payee.',
+  };
+  const el=document.getElementById('type-note');
+  el.style.display='block';el.innerHTML=notes[type]||'';
+}
+
+// ══════════════════════════════════════════
+// IDENTITY RECALL
+// ══════════════════════════════════════════
+const ID_KEY='mocenius_pub_identity_v2';
+
+function tryRecall(){
+  // Try from loaded master file first
+  if(master.loaded && master.contacts.length){
+    const saved=loadIdentity();
+    if(saved&&saved.email){
+      const c=master.contacts.find(c=>(c.email||'').toLowerCase()===saved.email.toLowerCase());
+      if(c){
+        showRecallCard(
+          (c.first_name||'')+' '+(c.last_name||''),
+          (c.company||saved.co||'')+(saved.cur?' · '+saved.cur:'')+(saved.email?' · '+saved.email:'')
+        );
+        return;
+      }
+    }
+  }
+  // Fall back to localStorage
+  const id=loadIdentity();
+  if(id&&id.fn){
+    showRecallCard(id.fn+' '+id.ln,(id.co||'')+(id.cur?' · '+id.cur:'')+(id.email?' · '+id.email:''));
+  }
+}
+
+function showRecallCard(name,meta){
+  document.getElementById('recall-name').textContent=name;
+  document.getElementById('recall-meta').textContent=meta;
+  document.getElementById('recall-card').style.display='block';
+  document.getElementById('sub-fields').style.display='none';
+}
+
+function confirmRecall(){
+  const id=loadIdentity();
+  if(id){['fn','ln','email','co','cur','role'].forEach(k=>{
+    const el=document.getElementById('sub-'+k);
+    if(el&&id[k])el.value=id[k];
+  });}
+  document.getElementById('sub-date').value=new Date().toISOString().slice(0,10);
+  showStep(3);
+}
+
+function dismissRecall(){
+  document.getElementById('recall-card').style.display='none';
+  document.getElementById('sub-fields').style.display='block';
+}
+
+function saveIdentity(){
+  try{localStorage.setItem(ID_KEY,JSON.stringify({
+    fn:g('sub-fn'),ln:g('sub-ln'),email:g('sub-email'),
+    co:g('sub-co'),cur:g('sub-cur'),role:g('sub-role'),
+  }));}catch(e){}
+}
+function loadIdentity(){try{return JSON.parse(localStorage.getItem(ID_KEY)||'null');}catch(e){return null;}}
+
+// ══════════════════════════════════════════
+// CONTRIBUTORS
+// ══════════════════════════════════════════
+function addContrib(){
+  cCount++;const i=cCount;
+  const d=document.createElement('div');
+  d.className='contrib-card';d.id='cc'+i;
+  d.innerHTML=`
+    <div class="contrib-hdr" onclick="toggleCC(${i})">
+      <div class="contrib-hdr-l">
+        <span class="contrib-num">#${i}</span>
+        <span class="contrib-name" id="ccn${i}">New Contributor</span>
+      </div>
+      <div style="display:flex;align-items:center;gap:8px">
+        <span id="ccr${i}" style="font-size:10px;color:var(--mut)"></span>
+        <button class="btn-x" onclick="event.stopPropagation();document.getElementById('cc${i}').remove();updateSplitTot()">×</button>
+      </div>
+    </div>
+    <div class="contrib-body" id="ccb${i}">
+      <div class="form-grid g3" style="margin-bottom:14px">
+        <div class="f"><label>First Name <span class="req">●</span></label><input type="text" id="c-fn${i}" placeholder="First name" oninput="updateCCN(${i})" /></div>
+        <div class="f"><label>Last Name <span class="req">●</span></label><input type="text" id="c-ln${i}" placeholder="Last name" oninput="updateCCN(${i})" /></div>
+        <div class="f"><label>Email <span class="req">●</span></label><input type="email" id="c-em${i}" placeholder="email@example.com" /></div>
+        <div class="f s2"><label>Street Address <span class="opt">optional</span></label><input type="text" id="c-st${i}" placeholder="Street address" /></div>
+        <div class="f s2"><label>Street Address Line 2 <span class="opt">optional</span></label><input type="text" id="c-st2${i}" placeholder="Apartment, suite, unit, PO Box" /></div>
+        <div class="f"><label>City <span class="opt">optional</span></label><input type="text" id="c-ci${i}" placeholder="City" /></div>
+        <div class="f"><label>State / Province <span class="opt">optional</span></label><input type="text" id="c-sp${i}" placeholder="State or Province" /></div>
+        <div class="f"><label>Postal / ZIP <span class="opt">optional</span></label><input type="text" id="c-zp${i}" placeholder="Postal / ZIP" /></div>
+        <div class="f"><label>Country <span class="opt">optional</span></label><input type="text" id="c-co${i}" placeholder="Country" /></div>
+      </div>
+      <div style="margin-bottom:12px">
+        <label style="font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--dim);display:block;margin-bottom:8px">Persona</label>
+        <div class="role-chips">
+          <div class="rchip on" onclick="pickRoleCC(this,${i})" data-r="Author">Author</div>
+          <div class="rchip" onclick="pickRoleCC(this,${i})" data-r="Co-Author">Co-Author</div>
+          <div class="rchip" onclick="pickRoleCC(this,${i})" data-r="Narrator">Narrator</div>
+          <div class="rchip" onclick="pickRoleCC(this,${i})" data-r="Cover Designer">Cover Designer</div>
+          <div class="rchip" onclick="pickRoleCC(this,${i})" data-r="Producer">Producer</div>
+        </div>
+      </div>
+      <div class="form-grid g3">
+        <div class="f"><label>Format Group <span class="opt">optional</span></label>
+          <select id="c-fg${i}">
+            <option value="All">All formats</option>
+            <option value="Print">Print only (PB / HC / LP)</option>
+            <option value="Ebook">Ebook only</option>
+            <option value="Audiobook">Audiobook only</option>
+          </select>
+          <div class="hint">Which formats this person's split applies to</div></div>
+        <div class="f"><label>Royalty Share % <span class="opt">blank = 100%</span></label>
+          <input type="number" id="c-sh${i}" placeholder="e.g. 50" min="0" max="100" step="0.1" oninput="updateSplitTot()" /></div>
+        <div class="f"><label>Pseudonym <span class="opt">optional</span></label>
+          <input type="text" id="c-pn${i}" placeholder="Pen name for this title" /></div>
+      </div>
+    </div>`;
+  document.getElementById('contrib-list').appendChild(d);
+  updateSplitTot();
+}
+function toggleCC(i){const b=document.getElementById('ccb'+i);b.style.display=b.style.display==='none'?'block':'none';}
+function updateCCN(i){const fn=g('c-fn'+i),ln=g('c-ln'+i);document.getElementById('ccn'+i).textContent=(fn||ln)?`${fn} ${ln}`.trim():'New Contributor';}
+function pickRoleCC(el,i){el.closest('.role-chips').querySelectorAll('.rchip').forEach(c=>c.classList.remove('on'));el.classList.add('on');document.getElementById('ccr'+i).textContent=el.dataset.r;}
+function pickRole(el){el.closest('.role-chips').querySelectorAll('.rchip').forEach(c=>c.classList.remove('on'));el.classList.add('on');}
+function updateSplitTot(){
+  let tot=0,any=false;
+  document.querySelectorAll('[id^="c-sh"]').forEach(el=>{const v=parseFloat(el.value);if(!isNaN(v)&&el.value.trim()!==''){tot+=v;any=true;}});
+  const el=document.getElementById('split-tot');
+  if(el){el.textContent=(!any?'100':tot.toFixed(1))+'%';el.className='split-n '+(any&&Math.abs(tot-100)>=0.1?'bad':'ok');}
+}
+
+function addSplitRow(){
+  srCount++;const i=srCount;
+  const d=document.createElement('div');
+  d.id='sr'+i;
+  d.style.cssText='display:grid;grid-template-columns:1fr 1fr 100px 32px;gap:10px;align-items:end;padding:10px 14px;background:var(--s2);border:1px solid var(--b1);border-radius:3px;margin-bottom:8px';
+  d.innerHTML=`
+    <div class="f"><label>First Name</label><input type="text" id="sr-fn${i}" placeholder="Payee first name" /></div>
+    <div class="f"><label>Last Name</label><input type="text" id="sr-ln${i}" placeholder="Payee last name" /></div>
+    <div class="f"><label>Share %</label><input type="number" id="sr-sh${i}" placeholder="e.g. 50" min="0" max="100" step="0.1" oninput="updateRsSplitTot()" /></div>
+    <button class="btn-x" onclick="document.getElementById('sr${i}').remove();updateRsSplitTot()" style="align-self:flex-end">×</button>`;
+  document.getElementById('split-rows').appendChild(d);
+  updateRsSplitTot();
+}
+function updateRsSplitTot(){
+  let tot=0;
+  document.querySelectorAll('[id^="sr-sh"]').forEach(el=>{const v=parseFloat(el.value);if(!isNaN(v))tot+=v;});
+  const el=document.getElementById('rs-split-tot');
+  if(el){el.textContent=tot.toFixed(1)+'%';el.className='split-n '+(Math.abs(tot-100)<0.1?'ok':'bad');}
+}
+
+function toggleDeceasedNote(prefix){
+  const v=document.getElementById(prefix+'-reason').value;
+  const n=document.getElementById(prefix+'-deceased-note');
+  if(n)n.style.display=v.includes('deceased')?'block':'none';
+}
+
+// ══════════════════════════════════════════
+// VALIDATION
+// ══════════════════════════════════════════
+function validate(n){
+  if(n===0){if(!master.loaded&&!isFresh){toast('Please load your data file or start fresh',1);return false;}return true;}
+  if(n===1){if(!selType){toast('Please select a request type',1);return false;}return true;}
+  if(n===2){
+    let ok=true;
+    ['sub-fn','sub-ln','sub-email','sub-co','sub-cur','sub-date'].forEach(id=>{
+      const el=document.getElementById(id);const f=el.closest('.f');
+      if(!el.value.trim()){f.classList.add('has-err');ok=false;}else f.classList.remove('has-err');
+    });
+    if(!ok){toast('Please complete all required fields',1);return false;}
+    saveIdentity();return true;
+  }
+  if(n===3){
+    if(selType==='new-contact'){
+      return reqFields(['nc-fn','nc-ln','nc-email']);
+    }
+    if(selType==='update-contact'){
+      if(!g('uc-sel')){toast('Please select a contact',1);return false;}
+      if(!g('uc-reason')){toast('Please select a reason for the change',1);return false;}
+      const newFs=['uc-fn','uc-ln','uc-email','uc-street'];
+      if(!newFs.some(id=>g(id))){toast('Please enter at least one field that is changing',1);return false;}
+      return true;
+    }
+    if(selType==='new-title'){
+      if(!reqFields(['nt-title','nt-date','nt-contact-sel']))return false;
+      const isbns=['isbn-pb','isbn-hc','isbn-lp','isbn-eb','isbn-ab'];
+      if(!isbns.some(id=>g(id))){toast('Please enter at least one ISBN or ASIN',1);return false;}
+      return true;
+    }
+    if(selType==='update-title'){
+      if(!g('ut-sel')){toast('Please select a title',1);return false;}return true;
+    }
+    if(selType==='new-isbn'){
+      return reqFields(['ni-title-sel','ni-fmt','ni-isbn','ni-date']);
+    }
+    if(selType==='update-isbn'){
+      if(!g('ui-title-sel')){toast('Please select a title',1);return false;}
+      if(!g('ui-isbn-sel')){toast('Please select an ISBN',1);return false;}
+      return true;
+    }
+    if(selType==='royalty-rate'){
+      if(!g('rr-title-sel')){toast('Please select a title',1);return false;}return true;
+    }
+    if(selType==='royalty-split'){
+      if(!g('rs-title-sel')){toast('Please select a title',1);return false;}
+      if(!g('rs-type')){toast('Please select what is changing',1);return false;}
+      return true;
+    }
+  }
+  return true;
+}
+
+function reqFields(ids){
+  let ok=true;
+  ids.forEach(id=>{
+    const el=document.getElementById(id);if(!el)return;
+    const f=el.closest('.f')||el.closest('.record-sel-wrap');
+    if(!el.value.trim()){if(f)f.classList.add('has-err');ok=false;}
+    else if(f)f.classList.remove('has-err');
+  });
+  if(!ok)toast('Please complete all required fields',1);
+  return ok;
+}
+
+function lv(el){const f=el.closest('.f');if(f&&el.value.trim())f.classList.remove('has-err');}
+
+// ══════════════════════════════════════════
+// REVIEW BUILDER
+// ══════════════════════════════════════════
+function buildReview(){
+  let html='';
+  html+=rg('Submitted By',[
+    ['Name',g('sub-fn')+' '+g('sub-ln')],
+    ['Email',g('sub-email')],['Company',g('sub-co')],
+    ['Currency',g('sub-cur')||'—'],['Date',g('sub-date')],
+    ['Request Type',TYPE_LABELS[selType]||selType],
+  ]);
+
+  if(selType==='new-contact'){
+    const rol=document.querySelector('#panel-new-contact .rchip.on');
+    html+=rg('New Contact',[
+      ['Name',g('nc-fn')+' '+g('nc-ln')],['Email',g('nc-email')],
+      ['Persona',rol?rol.dataset.r:'—'],['Pseudonym',g('nc-pseudo')||'—'],
+      ['Status',g('nc-status')],
+      ['Address',[g('nc-street'),g('nc-street2'),g('nc-city'),g('nc-state'),g('nc-zip'),g('nc-country')].filter(Boolean).join(', ')||'—'],
+      ['Notes',g('nc-notes')||'—'],
+    ]);
+  }
+
+  if(selType==='update-contact'){
+    html+=rg('Contact Being Updated',[
+      ['Name (current)',g('cc-fn-cur')+' '+g('cc-ln-cur')],
+      ['Email (current)',g('cc-email-cur')||'—'],
+      ['Reason',g('uc-reason')],
+    ]);
+    const changes=[
+      ['New First Name',g('uc-fn')],['New Last Name',g('uc-ln')],
+      ['New Email',g('uc-email')],['New Status',g('uc-status')],
+      ['New Street',g('uc-street')],['New City',g('uc-city')],
+      ['New State/Province',g('uc-state')],['New Postal/ZIP',g('uc-zip')],
+      ['New Country',g('uc-country')],
+    ].filter(r=>r[1]);
+    html+=rg('Changes Requested',changes.length?changes:[['','No change fields entered']]);
+  }
+
+  if(selType==='new-title'){
+    const bLabel={retail:'Retail',wholesale:'Wholesale',net:'Net'};
+    html+=rg('New Title',[
+      ['Title',g('nt-title')],['Subtitle',g('nt-sub')||'—'],
+      ['On Sale Date',g('nt-date')],['Currency',g('sub-cur')||'—'],
+    ]);
+    const isbns=[['Paperback',g('isbn-pb')],['Hardcover',g('isbn-hc')],['Large Print',g('isbn-lp')],
+      ['Ebook',g('isbn-eb')],['Audiobook',g('isbn-ab')],['Audiobook ASIN',g('isbn-ab2')]
+    ].filter(r=>r[1]);
+    if(isbns.length)html+=rg('ISBNs',isbns);
+    const rates=[['pb','Paperback'],['hc','Hardcover'],['lp','Large Print'],['eb','Ebook'],['ab','Audiobook']
+    ].filter(([k])=>g('rate-'+k)).map(([k,l])=>[l+' Rate',g('rate-'+k)+'% of '+(bLabel[g('basis-'+k)]||g('basis-'+k))+' sale']);
+    if(rates.length)html+=rg('Royalty Rates',rates);
+    for(let i=1;i<=cCount;i++){
+      const fn=document.getElementById('c-fn'+i);if(!fn)continue;
+      const rol=document.querySelector(`#cc${i} .rchip.on`);
+      const share=g('c-sh'+i);
+      html+=rg('Contributor #'+i,[
+        ['Name',g('c-fn'+i)+' '+g('c-ln'+i)],['Email',g('c-em'+i)||'—'],
+        ['Role',rol?rol.dataset.r:'—'],
+        ['Royalty Share',share?share+'%':'100% (sole)'],
+        ['Pen Name',g('c-pn'+i)||'—'],
+      ]);
+    }
+    html+=rg('Financial Terms',[
+      ['Advance',g('nt-advance')?'$'+g('nt-advance'):'—'],
+      ['Minimum Payout',g('nt-minpay')?'$'+g('nt-minpay'):'—'],
+      ['Print Cost/Book',g('nt-printcost')?'$'+g('nt-printcost'):'—'],
+      ['Who Paid Print',g('nt-whopaid')||'—'],
+    ]);
+  }
+
+  if(selType==='update-title'){
+    const changes=[
+      ['New Title',g('ut-title')],['New Subtitle',g('ut-sub')],
+      ['New On Sale Date',g('ut-date')],['New Status',g('ut-status')],
+      ['New Advance',g('ut-advance')],['New Min Payout',g('ut-minpay')],
+      ['New Print Cost',g('ut-printcost')],['New Ship Cost',g('ut-shipcost')],
+    ].filter(r=>r[1]);
+    html+=rg('Title Update',[['Title ID / Name',g('ut-sel')]]);
+    html+=rg('Changes Requested',changes.length?changes:[['','No change fields entered']]);
+    if(g('ut-notes'))html+=rg('Notes',[['',g('ut-notes')]]);
+  }
+
+  if(selType==='new-isbn'){
+    html+=rg('New ISBN',[
+      ['Title',g('ni-title-sel')],['Format',g('ni-fmt')],
+      ['ISBN / ASIN',g('ni-isbn')],['On Sale Date',g('ni-date')],
+      ['Royalty Rate',g('ni-rate')?g('ni-rate')+'% of '+g('ni-basis')+' sale':'—'],
+    ]);
+  }
+
+  if(selType==='update-isbn'){
+    const changes=[
+      ['Corrected ISBN / ASIN',g('ui-isbn')],
+      ['New On Sale Date',g('ui-date')],['New Status',g('ui-status')],
+    ].filter(r=>r[1]);
+    html+=rg('ISBN Update',[['Title',g('ui-title-sel')],['ISBN',g('ui-isbn-sel')]]);
+    html+=rg('Changes Requested',changes.length?changes:[['','No change fields entered']]);
+    if(g('ui-notes'))html+=rg('Notes',[['',g('ui-notes')]]);
+  }
+
+  if(selType==='royalty-rate'){
+    const rates=[['pb','Paperback'],['hc','Hardcover'],['lp','Large Print'],['eb','Ebook'],['ab','Audiobook']
+    ].filter(([k])=>g('rr-r-'+k)).map(([k,l])=>[l+' New Rate',g('rr-r-'+k)+'%']);
+    html+=rg('Royalty Rate Change',[['Title',g('rr-title-sel')],['Effective From',g('rr-effective')||'Next period']]);
+    if(rates.length)html+=rg('New Rates',rates);
+  }
+
+  if(selType==='royalty-split'){
+    html+=rg('Royalty Split / Payee Change',[
+      ['Title',g('rs-title-sel')],['Change Type',g('rs-type')],
+      ['Effective From',g('rs-effective')||'Next period'],
+    ]);
+    const v=g('rs-type');
+    if(v==='payee'||v==='both'){
+      html+=rg('Payee Substitution',[
+        ['Current',g('rs-old-fn')+' '+g('rs-old-ln')],
+        ['New',g('rs-new-fn')+' '+g('rs-new-ln')],
+        ['New Email',g('rs-new-email')],['Reason',g('rs-payee-reason')],
+      ]);
+    }
+  }
+
+  document.getElementById('review-content').innerHTML=html;
+}
+
+function rg(title,rows){
+  return `<div class="rev-group"><div class="rev-group-title">${title}</div>
+    ${rows.map(([k,v])=>`<div class="rev-row"><span class="rk">${k}</span><span class="rv">${esc(String(v||''))}</span></div>`).join('')}
+  </div>`;
+}
+
+// ══════════════════════════════════════════
+// SMART MERGE & SUBMIT
+// ══════════════════════════════════════════
+function doSubmit(){
+  const ref='MPU-'+Date.now().toString(36).toUpperCase().slice(-6);
+  document.getElementById('hdr-ref').textContent='Ref: '+ref;
+  const now=new Date().toISOString().slice(0,10);
+  const contactId=buildContactId(g('sub-fn'),g('sub-ln'));
+
+  // ── Work on clones of master arrays ──
+  let contacts=[...master.contacts];
+  let titles=[...master.titles];
+  let products=[...master.products];
+  let contributors=[...master.contributors];
+  let logRows=[...master.log];
+
+  function upsertContact(record){
+    const idx=contacts.findIndex(c=>c.contact_id===record.contact_id||(c.email&&c.email.toLowerCase()===(record.email||'').toLowerCase()));
+    if(idx>=0){contacts[idx]={...contacts[idx],...record,status:'NEW',updated:now};}
+    else contacts.push({...record,status:'NEW',created:now,updated:now});
+  }
+  function upsertTitle(record){
+    const idx=titles.findIndex(t=>t.title_id===record.title_id||t.title===record.title);
+    if(idx>=0){titles[idx]={...titles[idx],...record,status:'NEW',updated:now};}
+    else titles.push({...record,status:'NEW',created:now,updated:now});
+  }
+  function upsertProduct(record){
+    const idx=products.findIndex(p=>p.isbn===record.isbn&&record.isbn);
+    if(idx>=0){products[idx]={...products[idx],...record,status:'NEW',updated:now};}
+    else products.push({...record,status:'NEW',created:now,updated:now});
+  }
+  function upsertContributor(record){
+    const idx=contributors.findIndex(c=>c.contributor_id===record.contributor_id);
+    if(idx>=0){contributors[idx]={...contributors[idx],...record,status:'NEW',updated:now};}
+    else contributors.push({...record,status:'NEW',created:now,updated:now});
+  }
+
+  let detail='';
+
+  if(selType==='new-contact'){
+    const rol=document.querySelector('#panel-new-contact .rchip.on');
+    const cid=nameCode(g('nc-fn'),g('nc-ln'))+nextContactSerial(nameCode(g('nc-fn'),g('nc-ln')));
+    upsertContact({contact_id:cid,first_name:g('nc-fn'),last_name:g('nc-ln'),email:g('nc-email'),
+      persona:rol?rol.dataset.r:'',pseudonym:g('nc-pseudo'),phone:g('nc-phone'),
+      street:g('nc-street'),street2:g('nc-street2'),city:g('nc-city'),state:g('nc-state'),
+      zip:g('nc-zip'),country:g('nc-country'),notes:g('nc-notes'),
+      company:g('sub-co'),currency:g('sub-cur')});
+    detail=g('nc-fn')+' '+g('nc-ln')+' — new contact';
+  }
+
+  if(selType==='update-contact'){
+    const sel=document.getElementById('uc-sel').value;
+    const existing=contacts.find(c=>c.contact_id===sel)||{};
+    const updates={};
+    if(g('uc-fn'))updates.first_name=g('uc-fn');
+    if(g('uc-ln'))updates.last_name=g('uc-ln');
+    if(g('uc-email'))updates.email=g('uc-email');
+    if(g('uc-pseudo'))updates.pseudonym=g('uc-pseudo');
+    if(g('uc-status'))updates.contact_status=g('uc-status');
+    if(g('uc-street'))updates.street=g('uc-street');
+    if(g('uc-street2'))updates.street2=g('uc-street2');
+    if(g('uc-city'))updates.city=g('uc-city');
+    if(g('uc-state'))updates.state=g('uc-state');
+    if(g('uc-zip'))updates.zip=g('uc-zip');
+    if(g('uc-country'))updates.country=g('uc-country');
+    if(g('uc-notes'))updates.notes=g('uc-notes');
+    updates.change_reason=g('uc-reason');
+    upsertContact({...existing,...updates,contact_id:existing.contact_id});
+    detail=(existing.first_name||g('uc-sel'))+' — contact update';
+  }
+
+  if(selType==='new-title'){
+    const titleId=buildTitleId(contactId);
+    upsertTitle({title_id:titleId,title:g('nt-title'),subtitle:g('nt-sub'),
+      on_sale_date:g('nt-date'),contact_id:contactId,currency:g('sub-cur'),
+      advance:g('nt-advance'),min_payout:g('nt-minpay'),
+      print_cost:g('nt-printcost'),ship_cost:g('nt-shipcost'),who_paid:g('nt-whopaid'),
+      rate_pb:g('rate-pb'),basis_pb:g('basis-pb'),rate_hc:g('rate-hc'),basis_hc:g('basis-hc'),
+      rate_lp:g('rate-lp'),basis_lp:g('basis-lp'),rate_eb:g('rate-eb'),basis_eb:g('basis-eb'),
+      rate_ab:g('rate-ab'),basis_ab:g('basis-ab'),notes:g('nt-notes'),
+    });
+    // ISBNs
+    const fmts=[['pb','Paperback','isbn-pb'],['hc','Hardcover','isbn-hc'],['lp','Large Print','isbn-lp'],
+      ['eb','Ebook','isbn-eb'],['ab','Audiobook','isbn-ab']];
+    fmts.filter(([,, id])=>g(id)).forEach(([k,fmt,id])=>{
+      upsertProduct({isbn:g(id),title_id:titleId,title:g('nt-title'),format:fmt,
+        on_sale_date:g('nt-date'),rate:g('rate-'+k),basis:g('basis-'+k)});
+    });
+    if(g('isbn-ab2'))upsertProduct({isbn:g('isbn-ab2'),title_id:titleId,title:g('nt-title'),format:'Audiobook (Audible ASIN)',on_sale_date:g('nt-date')});
+    // Contributors → CONTACTS + CONTRIBUTORS
+    for(let i=1;i<=cCount;i++){
+      const fn=document.getElementById('c-fn'+i);if(!fn)continue;
+      const rol=document.querySelector(`#cc${i} .rchip.on`);
+      const share=g('c-sh'+i)||'100';
+      const fmtGroup=g('c-fg'+i)||'All';
+      const ccCode=nameCode(g('c-fn'+i),g('c-ln'+i));
+      const ccSerial=nextContactSerial(ccCode);
+      const ccId=ccCode+ccSerial;
+      // Upsert into CONTACTS
+      upsertContact({contact_id:ccId,first_name:g('c-fn'+i),last_name:g('c-ln'+i),
+        email:g('c-em'+i),persona:rol?rol.dataset.r:'',pseudonym:g('c-pn'+i),
+        street:g('c-st'+i),street2:g('c-st2'+i),city:g('c-ci'+i),state:g('c-sp'+i),
+        zip:g('c-zp'+i),country:g('c-co'+i),
+        company:g('sub-co'),currency:g('sub-cur')});
+      // Upsert into CONTRIBUTORS
+      const contribId=titleId+'-'+ccId;
+      upsertContributor({
+        contributor_id:contribId,title_id:titleId,title:g('nt-title'),
+        contact_id:ccId,contact_name:g('c-fn'+i)+' '+g('c-ln'+i),
+        persona:rol?rol.dataset.r:'',pseudonym:g('c-pn'+i),
+        format_group:fmtGroup,royalty_split:share,
+      });
+    }
+    detail='"'+g('nt-title')+'" — new title';
+  }
+
+  if(selType==='update-title'){
+    const sel=g('ut-sel');
+    const existing=titles.find(t=>t.title_id===sel||t.title===sel)||{};
+    const updates={};
+    if(g('ut-title'))updates.title=g('ut-title');
+    if(g('ut-sub'))updates.subtitle=g('ut-sub');
+    if(g('ut-date'))updates.on_sale_date=g('ut-date');
+    if(g('ut-status'))updates.title_status=g('ut-status');
+    if(g('ut-advance'))updates.advance=g('ut-advance');
+    if(g('ut-minpay'))updates.min_payout=g('ut-minpay');
+    if(g('ut-printcost'))updates.print_cost=g('ut-printcost');
+    if(g('ut-shipcost'))updates.ship_cost=g('ut-shipcost');
+    if(g('ut-notes'))updates.notes=g('ut-notes');
+    upsertTitle({...existing,...updates});
+    detail=(existing.title||sel)+' — title update';
+  }
+
+  if(selType==='new-isbn'){
+    const titleSel=g('ni-title-sel');
+    const titleRec=titles.find(t=>t.title_id===titleSel||t.title===titleSel)||{};
+    upsertProduct({isbn:g('ni-isbn'),title_id:titleRec.title_id||titleSel,
+      title:titleRec.title||titleSel,format:g('ni-fmt'),on_sale_date:g('ni-date'),
+      rate:g('ni-rate'),basis:g('ni-basis'),notes:g('ni-notes')});
+    detail=g('ni-fmt')+' '+g('ni-isbn')+' — new ISBN for "'+( titleRec.title||titleSel)+'"';
+  }
+
+  if(selType==='update-isbn'){
+    const sel=g('ui-isbn-sel');
+    const existing=products.find(p=>p.isbn===sel)||{};
+    const updates={};
+    if(g('ui-isbn'))updates.isbn=g('ui-isbn');
+    if(g('ui-date'))updates.on_sale_date=g('ui-date');
+    if(g('ui-status'))updates.isbn_status=g('ui-status');
+    if(g('ui-notes'))updates.notes=g('ui-notes');
+    upsertProduct({...existing,...updates});
+    detail=(existing.format||sel)+' ISBN — update';
+  }
+
+  if(selType==='royalty-rate'){
+    const sel=g('rr-title-sel');
+    const existing=titles.find(t=>t.title_id===sel||t.title===sel)||{};
+    const updates={};
+    ['pb','hc','lp','eb','ab'].forEach(k=>{if(g('rr-r-'+k))updates['rate_'+k]=g('rr-r-'+k);});
+    if(g('rr-effective'))updates.rate_effective=g('rr-effective');
+    if(g('rr-notes'))updates.notes=g('rr-notes');
+    upsertTitle({...existing,...updates});
+    detail=(existing.title||sel)+' — royalty rate change';
+  }
+
+  if(selType==='royalty-split'){
+    const sel=g('rs-title-sel');
+    const existing=titles.find(t=>t.title_id===sel||t.title===sel)||{};
+    const updates={split_type:g('rs-type')};
+    if(g('rs-effective'))updates.split_effective=g('rs-effective');
+    if(g('rs-old-fn'))updates.old_payee=g('rs-old-fn')+' '+g('rs-old-ln');
+    if(g('rs-new-fn'))updates.new_payee=g('rs-new-fn')+' '+g('rs-new-ln');
+    if(g('rs-new-email'))updates.new_payee_email=g('rs-new-email');
+    if(g('rs-payee-reason'))updates.payee_reason=g('rs-payee-reason');
+    if(g('rs-notes'))updates.split_notes=g('rs-notes');
+    // Capture split rows
+    const splitRows=[];
+    document.querySelectorAll('[id^="sr"]').forEach(row=>{
+      const id=row.id.replace('sr','');if(isNaN(parseInt(id)))return;
+      splitRows.push(g('sr-fn'+id)+' '+g('sr-ln'+id)+':'+g('sr-sh'+id)+'%');
+    });
+    if(splitRows.length)updates.new_split=splitRows.join(' | ');
+    upsertTitle({...existing,...updates});
+    detail=(existing.title||sel)+' — royalty split change';
+  }
+
+  // Append log row
+  logRows.unshift({
+    ref,date:now,datetime:new Date().toLocaleString('en-CA',{year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'}),
+    type:TYPE_LABELS[selType]||selType,
+    submitter:g('sub-fn')+' '+g('sub-ln'),
+    company:g('sub-co'),detail,status:'NEW',
+  });
+
+  // ── BUILD MASTER WORKBOOK ──
+  const wb=XLSX.utils.book_new();
+
+  function makeSheet(rows,name){
+    if(!rows.length){
+      const ws=XLSX.utils.aoa_to_sheet([[name+' — no records yet']]);
+      XLSX.utils.book_append_sheet(wb,ws,name);return;
+    }
+    const ws=XLSX.utils.json_to_sheet(rows);
+    ws['!cols']=Object.keys(rows[0]).map(()=>({wch:20}));
+    XLSX.utils.book_append_sheet(wb,ws,name);
+  }
+
+  makeSheet(contacts,'CONTACTS');
+  makeSheet(titles,'TITLES');
+  makeSheet(products,'PRODUCTS');
+  makeSheet(contributors,'CONTRIBUTORS');
+  makeSheet(logRows,'LOG');
+
+  // README tab
+  const readme=XLSX.utils.aoa_to_sheet([
+    ['MOCENIUS — PUBLISHER DATA FILE'],[''],
+    ['Company',g('sub-co')],
+    ['Currency',g('sub-cur')],
+    ['Last Updated',now],
+    ['Last Reference',ref],[''],
+    ['STATUS VALUES',''],
+    ['NEW','Submitted — not yet imported by Mocenius'],
+    ['PENDING','Seen by Mocenius — import in progress'],
+    ['IMPORTED','Live in FileMaker — record complete'],[''],
+    ['DATA VAULT PATH','01-'+master.clientCode+'-DATA VAULT / 01-'+master.clientCode+' TO RMS / 01-AUTHOR TITLE UPDATES'],
+  ]);
+  readme['!cols']=[{wch:22},{wch:50}];
+  XLSX.utils.book_append_sheet(wb,readme,'README');
+
+  const co=g('sub-co').replace(/\s+/g,'_').toUpperCase().slice(0,10);
+  const typeCode=selType.replace('-','').toUpperCase().slice(0,8);
+  const fn=`${co}-UPDATE-${ref}-${typeCode}.xlsx`;
+  lastWb=wb;lastFn=fn;
+  XLSX.writeFile(wb,fn);
+
+  // Update local master for next session
+  master.contacts=contacts;master.titles=titles;master.products=products;
+  master.contributors=contributors;master.log=logRows;
+
+  // Local activity log
+  logAdd({
+    datetime:new Date().toLocaleString('en-CA',{year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'}),
+    ref,type:selType,submitter:g('sub-fn')+' '+g('sub-ln'),company:g('sub-co'),detail,filename:fn,
+  });
+
+  const vaultPath=master.clientCode?`01-${master.clientCode}-DATA VAULT / 01-${master.clientCode} TO RMS / 01-AUTHOR TITLE UPDATES`:'Your Data Vault folder';
+  document.getElementById('success-msg').innerHTML=
+    `Reference <strong>${ref}</strong><br>File: <strong>${fn}</strong><br><br>
+    Save this file to your Data Vault — it replaces your previous data file:<br>
+    <span class="vault-path">${vaultPath}</span>`;
+
+  showStep(5);
+}
+
+function dlAgain(){if(lastWb)XLSX.writeFile(lastWb,lastFn);}
+
+// ══════════════════════════════════════════
+// ACTIVITY LOG (localStorage)
+// ══════════════════════════════════════════
+const LOG_KEY='mocenius_pub_log_v2';
+function logLoad(){try{return JSON.parse(localStorage.getItem(LOG_KEY)||'[]');}catch(e){return[];}}
+function logSave(e){try{localStorage.setItem(LOG_KEY,JSON.stringify(e));}catch(e){}}
+function logAdd(entry){const e=logLoad();e.unshift(entry);logSave(e);renderLog();}
+
+function renderLog(){
+  const entries=logLoad();
+  const tbody=document.getElementById('log-tbody');
+  const empty=document.getElementById('log-empty');
+  const count=document.getElementById('log-count');
+  count.textContent=entries.length;
+  count.style.display=entries.length?'inline':'none';
+  if(!entries.length){tbody.innerHTML='';empty.style.display='block';return;}
+  empty.style.display='none';
+  tbody.innerHTML=entries.map(e=>`<tr>
+    <td style="white-space:nowrap;color:var(--dim);font-size:10px">${esc(e.datetime||'')}</td>
+    <td style="font-size:10px;color:var(--mut)">${esc(e.ref||'')}</td>
+    <td><span class="log-type-pill ${TYPE_PILL[e.type]||''}">${esc(TYPE_LABELS[e.type]||e.type||'')}</span></td>
+    <td style="color:var(--dim);max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${esc(e.detail||'')}">${esc(e.detail||'')}</td>
+    <td>${esc(e.submitter||'')}</td>
+    <td style="font-size:10px;color:var(--mut)">${esc(e.filename||'')}</td>
+  </tr>`).join('');
+}
+
+function toggleLog(){document.getElementById('log-drawer').classList.toggle('open');renderLog();}
+
+function exportLog(){
+  const entries=logLoad();
+  if(!entries.length){toast('No log entries to export',1);return;}
+  const wb=XLSX.utils.book_new();
+  const headers=['Date & Time','Reference','Type','Detail','Submitter','Company','Filename'];
+  const rows=entries.map(e=>[e.datetime,e.ref,TYPE_LABELS[e.type]||e.type,e.detail,e.submitter,e.company,e.filename]);
+  const ws=XLSX.utils.aoa_to_sheet([headers,...rows]);
+  ws['!cols']=[{wch:18},{wch:14},{wch:22},{wch:40},{wch:22},{wch:22},{wch:38}];
+  XLSX.utils.book_append_sheet(wb,ws,'Activity Log');
+  XLSX.writeFile(wb,`Mocenius-ActivityLog-${new Date().toISOString().slice(0,10)}.xlsx`);
+}
+
+// ══════════════════════════════════════════
+// HELPERS
+// ══════════════════════════════════════════
+function g(id){const el=document.getElementById(id);return el?el.value.trim():'';}
+function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+function toast(msg,err){
+  const t=document.getElementById('toast');
+  t.textContent=msg;t.className='toast'+(err?' err':'')+' show';
+  setTimeout(()=>t.classList.remove('show'),3200);
+}
+
+// ══════════════════════════════════════════
+// INIT
+// ══════════════════════════════════════════
+(function(){
+  document.getElementById('sub-date').value=new Date().toISOString().slice(0,10);
+
+  // Apply client config
+  applyClientConfig();
+
+  addContrib();
+  initLoadZone();
+  renderLog();
+  showStep(0);
+})();
+
+</script>
+</body>
+</html>
