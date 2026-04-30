@@ -1,60 +1,1680 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Supabase Test</title>
-  </head>
-  <body>
-    <h2>Supabase connectivity test (public.leads)</h2>
-
-    <div id="status">Starting…</div>
-    <ul id="list"></ul>
-
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sales CRM v43</title>
+    <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+
+
+<script>
+  const SUPABASE_URL = 'https://uwauubdwvxpfgfkagqqx.supabase.co';
+  const SUPABASE_ANON_KEY = 'sb_publishable_inrERwvaOAuOJNOSqXHBPQ_J6VCxrB9';
+
+  // Never redeclare; just create once on window
+  if (!window.supabaseClient) {
+    const supabaseLib = window.supabase; // CDN library
+    window.supabaseClient = supabaseLib.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+      auth: { persistSession: true, autoRefreshToken: true }
+    });
+  }
+
+
+</script>
+
+
+    <style>
+        :root { --brand-navy: #1a2238; --brand-gold: #c5b358; --brand-grey: #dddfe2; }
+        .active-row { border-left: 4px solid var(--brand-gold) !important; background-color: #fefdf5 !important; }
+        .tab-active { border-bottom: 3px solid var(--brand-gold); color: var(--brand-navy) !important; font-weight: 800; }
+        .save-toast { transition: all 0.3s ease; opacity: 0; pointer-events: none; transform: translateY(-10px); }
+        .save-toast.show { opacity: 1; transform: translateY(0); }
+        .sort-header { cursor: pointer; user-select: none; }
+        .sort-header:hover { color: var(--brand-navy); }
+        .label-xs { display: block; font-size: 9px; font-weight: 800; text-transform: uppercase; color: #94a3b8; letter-spacing: 0.05em; margin-bottom: 4px; }
+        .field-input { width: 100%; padding: 6px 10px; background: white; border: 1px solid #dddfe2; border-radius: 6px; font-size: 12px; outline: none; color: #1a2238; }
+        .field-input:focus { border-color: #c5b358; box-shadow: 0 0 0 2px rgba(197,179,88,0.2); }
+        .activity-type-btn { padding: 4px 10px; border-radius: 999px; font-size: 9px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.05em; border: 1px solid #dddfe2; background: white; color: #94a3b8; cursor: pointer; transition: all 0.15s; }
+        .activity-type-btn.selected { background: #1a2238; color: white; border-color: #1a2238; }
+    </style>
+</head>
+<body class="bg-slate-50 text-[#1a2238] font-sans antialiased">
+
+    <!-- ── Connection-lost banner ───────────────────────────────────────────── -->
+    <div id="conn-banner" style="display:none;position:fixed;top:0;left:0;right:0;z-index:9999;background:#7f1d1d;color:#fff;text-align:center;padding:10px 16px;font-size:11px;font-weight:800;letter-spacing:0.12em;text-transform:uppercase;">
+        ⚠ Connection lost — Supabase not responding.
+        <button onclick="reconnectSupabase()" style="margin-left:16px;background:#fff;color:#7f1d1d;border:none;border-radius:999px;padding:3px 14px;font-size:10px;font-weight:900;cursor:pointer;letter-spacing:0.08em;">Reconnect</button>
+        <button onclick="document.getElementById('conn-banner').style.display='none'" style="margin-left:8px;background:transparent;color:#fff;border:1px solid rgba(255,255,255,0.4);border-radius:999px;padding:3px 10px;font-size:10px;cursor:pointer;">Dismiss</button>
+    </div>
+
+    <!-- ── Login Screen ─────────────────────────────────────────────────── -->
+    <div id="login-screen" class="fixed inset-0 z-[100] flex items-center justify-center bg-[#1a2238]">
+        <div class="bg-white p-8 rounded-2xl shadow-2xl w-full max-w-md">
+            <h1 class="text-3xl font-black text-[#1a2238] text-center mb-1 tracking-tighter">MOCENIUS</h1>
+            <p class="text-center text-slate-400 text-[10px] mb-8 uppercase tracking-widest">CRM</p>
+            <div class="space-y-4">
+                <input type="email" id="login-email" placeholder="Email"
+                    class="w-full px-4 py-3 border border-[#dddfe2] rounded-xl outline-none focus:ring-2 focus:ring-[#c5b358] text-sm">
+                <input type="password" id="login-password" placeholder="Password"
+                    class="w-full px-4 py-3 border border-[#dddfe2] rounded-xl outline-none focus:ring-2 focus:ring-[#c5b358] text-sm">
+                <p id="login-error" class="hidden text-red-500 text-xs text-center font-bold py-1"></p>
+                <button id="btn-login"
+                    class="w-full bg-[#1a2238] text-white font-bold py-3 rounded-xl hover:opacity-90 transition uppercase tracking-widest text-sm">
+                    Sign In
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ── New Prospect Modal ───────────────────────────────────────────── -->
+    <div id="new-prospect-modal" class="hidden fixed inset-0 z-[90] flex items-center justify-center bg-black/50">
+        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-lg p-8 max-h-[90vh] overflow-y-auto">
+            <h2 class="text-xl font-black text-[#1a2238] mb-6 tracking-tighter">Add New Prospect</h2>
+            <div class="grid grid-cols-2 gap-4">
+                <div><label class="label-xs">First Name *</label><input id="np-first" class="field-input"></div>
+                <div><label class="label-xs">Last Name *</label><input id="np-last" class="field-input"></div>
+                <div><label class="label-xs">Email</label><input id="np-email" type="email" class="field-input"></div>
+                <div><label class="label-xs">Phone</label><input id="np-phone" class="field-input"></div>
+                <div><label class="label-xs">Secondary Email</label><input id="np-email2" type="email" class="field-input"></div>
+                <div><label class="label-xs">Secondary Phone</label><input id="np-phone2" class="field-input"></div>
+                <div><label class="label-xs">Company</label><input id="np-company" class="field-input"></div>
+                <div><label class="label-xs">Job Title</label><input id="np-job" class="field-input"></div>
+                <div><label class="label-xs">Industry</label><input id="np-industry" class="field-input"></div>
+                <div><label class="label-xs">Source</label><input id="np-source" class="field-input"></div>
+                <div><label class="label-xs">LinkedIn URL</label><input id="np-linkedin" class="field-input"></div>
+                <div><label class="label-xs">Website</label><input id="np-website" class="field-input" placeholder="https://..."></div>
+                <div><label class="label-xs">Time Zone</label>
+                    <select id="np-timezone" class="field-input">
+                        <option value="">— Select —</option>
+                        <option value="ET">ET — Eastern</option>
+                        <option value="CT">CT — Central</option>
+                        <option value="MT">MT — Mountain</option>
+                        <option value="PT">PT — Pacific</option>
+                        <option value="UK/EU">UK / Europe</option>
+                        <option value="AU/NZ">AU / NZ</option>
+                        <option value="Other">Other</option>
+                    </select>
+                </div>
+                <div><label class="label-xs">Assigned To</label><input id="np-assigned" class="field-input"></div>
+                <div>
+                    <label class="label-xs">Status</label>
+                    <select id="np-status" class="field-input">
+                        <option value="PROSPECT">Prospect</option>
+                        <option value="WARM LEAD">Warm Lead</option>
+                        <option value="IN TALKS">In Talks</option>
+                        <option value="WON">Won</option>
+                        <option value="LOST">Lost</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="label-xs">Priority</label>
+                    <select id="np-priority" class="field-input">
+                        <option value="">— None —</option>
+                        <option value="High">High</option>
+                        <option value="Medium">Medium</option>
+                        <option value="Low">Low</option>
+                    </select>
+                </div>
+            </div>
+            <p id="np-error" class="hidden text-red-500 text-xs mt-3 font-bold"></p>
+            <div class="flex gap-3 mt-6">
+                <button onclick="closeNewProspect()"
+                    class="flex-1 border border-[#dddfe2] text-slate-500 py-3 rounded-xl font-bold text-sm hover:bg-slate-50">
+                    Cancel
+                </button>
+                <button onclick="saveNewProspect()"
+                    class="flex-1 bg-[#c5b358] text-[#1a2238] py-3 rounded-xl font-bold text-sm hover:opacity-90">
+                    Add Prospect
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ── Main App ─────────────────────────────────────────────────────── -->
+    <div id="app-interface" class="hidden h-screen flex flex-col">
+
+        <nav class="bg-white border-b border-[#dddfe2] px-6 py-3 flex items-center gap-4 shadow-sm z-50 shrink-0">
+            <h1 class="text-xl font-black text-[#1a2238] tracking-tighter shrink-0">
+                SALES CRM <span class="text-[#c5b358] font-light text-sm italic">v43</span>
+            </h1>
+            <input type="text" id="global-search" oninput="applyFiltersAndSort()" placeholder="Search leads..."
+                class="flex-1 max-w-xs bg-slate-50 border border-[#dddfe2] rounded-lg px-3 py-1.5 text-xs outline-none focus:ring-1 focus:ring-[#c5b358]">
+            <div class="ml-auto flex items-center gap-4">
+                <button onclick="openActivityLog()"
+                    class="bg-[#f7f4ee] border border-[#dddfe2] text-[#1a2238] px-4 py-2 rounded-lg text-[10px] font-black uppercase tracking-widest hover:bg-[#ede9df] transition shrink-0">
+                    Activity Log
+                </button>
+                <button onclick="openNewProspect()"
+                    class="bg-[#c5b358] text-[#1a2238] px-4 py-2 rounded-lg text-[10px] font-black uppercase tracking-widest hover:opacity-90 transition shrink-0">
+                    + New Prospect
+                </button>
+                <span id="user-badge" class="text-[10px] text-slate-400 font-bold shrink-0 hidden sm:block"></span>
+                <button onclick="openSettingsModal()" title="Settings"
+                    class="text-slate-400 hover:text-[#1a2238] transition shrink-0" style="font-size:18px;line-height:1;">⚙</button>
+                <button onclick="handleLogout()"
+                    class="text-[10px] font-bold text-slate-400 hover:text-red-500 uppercase tracking-widest shrink-0">
+                    Sign Out
+                </button>
+            </div>
+        </nav>
+
+        <main class="flex flex-1 overflow-hidden relative">
+
+            <div id="save-toast"
+                class="absolute top-4 left-1/2 -translate-x-1/2 bg-emerald-600 text-white px-6 py-2 rounded-full text-[10px] font-black uppercase tracking-widest shadow-2xl z-[60] save-toast">
+            </div>
+
+            <!-- ── Centre column: filter bar + lead table ─────────────── -->
+            <div class="flex flex-col flex-1 overflow-hidden">
+
+            <!-- ── Filter Bar ─────────────────────────────────────────────── -->
+            <div class="bg-white border-b border-[#dddfe2] px-6 py-3 flex items-center gap-3 shrink-0">
+                <span class="text-[9px] font-black uppercase tracking-widest text-slate-400">Filter</span>
+                <select id="filter-field" onchange="onFilterFieldChange()" class="field-input max-w-[160px] text-xs">
+                    <option value="">— Field —</option>
+                    <option value="timezone">Time Zone</option>
+                    <option value="status">Status</option>
+                    <option value="priority_level">Priority</option>
+                    <option value="source_tag">Source Tag</option>
+                    <option value="industry">Industry</option>
+                    <option value="assigned_to">Assigned To</option>
+                    <option value="sales_flow_stage">Flow Stage</option>
+                </select>
+                <select id="filter-value" onchange="applyFiltersAndSort()" class="field-input max-w-[180px] text-xs hidden">
+                    <option value="">— All —</option>
+                </select>
+                <button onclick="clearFilter()" id="filter-clear-btn"
+                    class="hidden text-[9px] font-black uppercase tracking-widest text-red-400 border border-red-200 px-3 py-1.5 rounded-lg hover:bg-red-50 transition">
+                    Clear ✕
+                </button>
+                <span id="filter-count" class="text-[9px] text-slate-400 ml-auto"></span>
+            </div>
+
+            <!-- ── Lead Table ──────────────────────────────────────────── -->
+            <section class="flex-1 overflow-hidden p-6 bg-slate-50 flex flex-col">
+                <div class="bg-white rounded-xl shadow-sm border border-[#dddfe2] overflow-auto flex-1">
+                    <table class="w-full text-left border-collapse text-sm">
+                        <thead class="bg-slate-50 border-b sticky top-0 z-10 shadow-sm">
+                            <tr>
+                                <th onclick="handleSort('name')" class="p-3 pl-4 font-bold text-slate-400 uppercase text-[10px] sort-header">
+                                    Name <span id="sort-icon-name" class="ml-1 text-[8px]"></span>
+                                </th>
+                                <th onclick="handleSort('company')" class="p-3 font-bold text-slate-400 uppercase text-[10px] sort-header">
+                                    Company <span id="sort-icon-company" class="ml-1 text-[8px]"></span>
+                                </th>
+                                <th onclick="handleSort('followup')" class="p-2 font-bold text-slate-400 uppercase text-[10px] sort-header">
+                                    F/U <span id="sort-icon-followup" class="ml-1 text-[8px]"></span>
+                                </th>
+                                <th onclick="handleSort('status')" class="p-2 font-bold text-slate-400 uppercase text-[10px] text-center sort-header">
+                                    Status <span id="sort-icon-status" class="ml-1 text-[8px]"></span>
+                                </th>
+                                <th onclick="handleSort('flow')" class="p-2 font-bold text-slate-400 uppercase text-[10px] text-center sort-header">
+                                    Flow <span id="sort-icon-flow" class="ml-1 text-[8px]"></span>
+                                </th>
+                            </tr>
+                        </thead>
+                        <tbody id="lead-table-body" class="divide-y divide-[#dddfe2]"></tbody>
+                    </table>
+                </div>
+            </section>
+
+            </div><!-- /centre column -->
+
+            <!-- ── Sidebar ─────────────────────────────────────────────── -->
+            <aside class="w-[480px] bg-white border-l border-[#dddfe2] flex flex-col shadow-2xl shrink-0">
+
+                <div class="flex border-b border-[#dddfe2] shrink-0">
+                    <button onclick="switchTab('detail')" id="tab-btn-detail"
+                        class="flex-1 py-3 text-[10px] font-black uppercase tracking-widest text-slate-400 tab-active">
+                        Lead Detail
+                    </button>
+                    <button onclick="switchTab('script')" id="tab-btn-script"
+                        class="flex-1 py-3 text-[10px] font-black uppercase tracking-widest text-slate-400">
+                        Call Script
+                    </button>
+                    <button onclick="switchTab('email')" id="tab-btn-email"
+                        class="flex-1 py-3 text-[10px] font-black uppercase tracking-widest text-slate-400">
+                        Email
+                    </button>
+                </div>
+
+                <div class="flex-1 overflow-y-auto">
+
+                    <!-- ── Detail Tab ───────────────────────────────────── -->
+                    <div id="tab-detail" class="p-6 space-y-4">
+                        <div id="no-selection-msg" class="text-center text-slate-400 text-sm py-12">
+                            Select a lead to view details
+                        </div>
+
+                        <div id="lead-detail-form" class="hidden space-y-4">
+
+                            <div class="flex gap-3">
+                                <div class="flex-1">
+                                    <label class="label-xs">First Name</label>
+                                    <input id="edit-first" class="field-input font-bold">
+                                </div>
+                                <div class="flex-1">
+                                    <label class="label-xs">Last Name</label>
+                                    <input id="edit-last" class="field-input font-bold">
+                                </div>
+                            </div>
+
+                            <div class="bg-slate-50 p-4 rounded-xl border border-[#dddfe2] space-y-3">
+                                <div class="grid grid-cols-2 gap-3">
+                                    <div>
+                                        <label class="label-xs">Status</label>
+                                        <select id="edit-status" class="field-input font-bold" style="color:#c5b358">
+                                            <option value="PROSPECT">Prospect</option>
+                                            <option value="WARM LEAD">Warm Lead</option>
+                                            <option value="IN TALKS">In Talks</option>
+                                            <option value="WON">Won</option>
+                                            <option value="LOST">Lost</option>
+                                        </select>
+                                    </div>
+                                    <div>
+                                        <label class="label-xs">Priority</label>
+                                        <select id="edit-priority" class="field-input font-bold">
+                                            <option value="">— None —</option>
+                                            <option value="High">High</option>
+                                            <option value="Medium">Medium</option>
+                                            <option value="Low">Low</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                <div>
+                                    <label class="label-xs">Sales Flow Stage</label>
+                                    <select id="edit-flow" class="field-input font-bold">
+                                        <option value="">— None —</option>
+                                        <option value="New">New</option>
+                                        <option value="Called">Called</option>
+                                        <option value="Emailed">Emailed</option>
+                                        <option value="Sent LinkedIn Message">Sent LinkedIn Message</option>
+                                        <option value="Sent Follow-Up Email">Sent Follow-Up Email</option>
+                                        <option value="Discovery Call">Discovery Call</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label class="label-xs">Next Follow-Up Date</label>
+                                    <input type="date" id="edit-followup" class="field-input font-bold" style="color:#c5b358">
+                                </div>
+                            </div>
+
+                            <div class="grid grid-cols-2 gap-3">
+                                <div>
+                                    <label class="label-xs">Email</label>
+                                    <input id="edit-email" type="email" class="field-input">
+                                </div>
+                                <div>
+                                    <label class="label-xs">Phone</label>
+                                    <div class="flex gap-1">
+                                        <input id="edit-phone" class="field-input">
+                                        <button onclick="clearField('edit-phone')" title="Clear"
+                                            class="px-2 border border-[#dddfe2] rounded-md text-slate-400 hover:text-red-500 hover:border-red-300 text-xs shrink-0">✕</button>
+                                    </div>
+                                </div>
+                                <div>
+                                    <label class="label-xs">Secondary Email</label>
+                                    <input id="edit-email2" type="email" class="field-input">
+                                </div>
+                                <div>
+                                    <label class="label-xs">Secondary Phone</label>
+                                    <div class="flex gap-1">
+                                        <input id="edit-phone2" class="field-input">
+                                        <button onclick="clearField('edit-phone2')" title="Clear"
+                                            class="px-2 border border-[#dddfe2] rounded-md text-slate-400 hover:text-red-500 hover:border-red-300 text-xs shrink-0">✕</button>
+                                    </div>
+                                </div>
+                                <div>
+                                    <label class="label-xs">Company</label>
+                                    <input id="edit-company" class="field-input">
+                                </div>
+                                <div>
+                                    <label class="label-xs">Job Title</label>
+                                    <input id="edit-job" class="field-input">
+                                </div>
+                                <div>
+                                    <label class="label-xs">Industry</label>
+                                    <input id="edit-industry" class="field-input">
+                                </div>
+                                <div>
+                                    <label class="label-xs">Source</label>
+                                    <input id="edit-source" class="field-input">
+                                </div>
+                                <div class="col-span-2">
+                                    <label class="label-xs">LinkedIn URL</label>
+                                    <div class="flex items-center gap-2">
+                                        <input id="edit-linkedin" class="field-input flex-1" placeholder="https://linkedin.com/in/...">
+                                        <button onclick="openFieldUrl('edit-linkedin')" title="Open LinkedIn profile"
+                                            class="shrink-0 flex items-center justify-center w-8 h-8 rounded-lg transition active:scale-95"
+                                            style="background:#0a66c2;">
+                                            <svg width="14" height="14" viewBox="0 0 14 14" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                                <rect x="1" y="4" width="3" height="9" fill="white"/>
+                                                <circle cx="2.5" cy="2.5" r="1.5" fill="white"/>
+                                                <path d="M6 4h2.5v1.3C8.9 4.5 9.8 4 11 4c2 0 2 1.5 2 3v6h-3V7.5c0-.8-.3-1.5-1-1.5s-1 .7-1 1.5V13H6V4z" fill="white"/>
+                                            </svg>
+                                        </button>
+                                    </div>
+                                </div>
+                                <div class="col-span-2">
+                                    <label class="label-xs">Website</label>
+                                    <div class="flex items-center gap-2">
+                                        <input id="edit-website" class="field-input flex-1" placeholder="https://...">
+                                        <button onclick="openFieldUrl('edit-website')" title="Open website"
+                                            class="shrink-0 flex items-center justify-center w-8 h-8 rounded-lg transition active:scale-95"
+                                            style="background:#1a2238;">
+                                            <svg width="14" height="14" viewBox="0 0 14 14" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                                <path d="M7 1a6 6 0 1 0 0 12A6 6 0 0 0 7 1z" stroke="white" stroke-width="1.2"/>
+                                                <path d="M7 1c-1.5 0-2.5 2.7-2.5 6s1 6 2.5 6 2.5-2.7 2.5-6-1-6-2.5-6z" stroke="white" stroke-width="1.2"/>
+                                                <path d="M1 7h12M2 4h10M2 10h10" stroke="white" stroke-width="1.2"/>
+                                            </svg>
+                                        </button>
+                                    </div>
+                                </div>
+                                <div>
+                                    <label class="label-xs">Time Zone</label>
+                                    <select id="edit-timezone" class="field-input">
+                                        <option value="">— Select —</option>
+                                        <option value="ET">ET — Eastern</option>
+                                        <option value="CT">CT — Central</option>
+                                        <option value="MT">MT — Mountain</option>
+                                        <option value="PT">PT — Pacific</option>
+                                        <option value="UK/EU">UK / Europe</option>
+                                        <option value="AU/NZ">AU / NZ</option>
+                                        <option value="Other">Other</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label class="label-xs">Assigned To</label>
+                                    <input id="edit-assigned" class="field-input">
+                                </div>
+                            </div>
+
+                            <div>
+                                <label class="label-xs">Notes</label>
+                                <textarea id="edit-notes" rows="3" class="field-input resize-none"
+                                    placeholder="Persistent notes about this lead..."></textarea>
+                            </div>
+
+                            <button id="save-lead-btn" onclick="saveLeadChanges()"
+                                class="w-full bg-[#c5b358] text-[#1a2238] py-3 rounded-xl text-[10px] font-black uppercase tracking-widest shadow-md active:scale-95 transition-all">
+                                Save All Changes
+                            </button>
+                            <button onclick="deleteActiveLead()"
+                                class="w-full bg-white border border-red-300 text-red-500 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-red-50 transition-all">
+                                Delete Contact
+                            </button>
+                            <p id="save-error" class="hidden text-red-500 text-[10px] font-bold bg-red-50 border border-red-200 rounded-lg px-3 py-2 leading-relaxed"></p>
+
+                            <!-- LinkedIn action card — shown when flow=Emailed + linkedin_url present -->
+                            <div id="linkedin-action-card" class="hidden bg-indigo-50 border border-indigo-200 rounded-xl p-4 space-y-2">
+                                <p class="text-[10px] font-black uppercase tracking-widest text-indigo-700">LinkedIn Follow-Up Ready</p>
+                                <p class="text-[9px] text-indigo-500 leading-relaxed">Copy the canned message, open their LinkedIn profile, and mark as sent — all in one click.</p>
+                                <button id="linkedin-send-btn" onclick="markLinkedInSent()"
+                                    class="w-full bg-indigo-600 text-white py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest hover:opacity-90 transition active:scale-95">
+                                    Send LinkedIn Message &amp; Mark Sent
+                                </button>
+                            </div>
+
+                            <div class="border-t border-[#dddfe2] pt-4 space-y-3">
+                                <h3 class="label-xs mb-1">Log Activity</h3>
+                                <div class="flex flex-wrap gap-2">
+                                    <button onclick="selectActivityType(this)" data-type="Call" class="activity-type-btn selected">Call</button>
+                                    <button onclick="selectActivityType(this)" data-type="Email" class="activity-type-btn">Email</button>
+                                    <button onclick="selectActivityType(this)" data-type="Meeting" class="activity-type-btn">Meeting</button>
+                                    <button onclick="selectActivityType(this)" data-type="Discovery Call" class="activity-type-btn">Discovery Call</button>
+                                    <button onclick="selectActivityType(this)" data-type="Note" class="activity-type-btn">Note</button>
+                                </div>
+                                <textarea id="note-input" rows="2" class="field-input resize-none"
+                                    placeholder="What happened? (call connected, left voicemail, email sent...)"></textarea>
+                                <button id="save-note-btn" onclick="saveNote()"
+                                    class="w-full bg-[#1a2238] text-white py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest hover:opacity-90 transition">
+                                    Save Activity
+                                </button>
+                                <h3 class="label-xs mt-2 mb-1">Activity History</h3>
+                                <div id="activity-list" class="space-y-2"></div>
+                            </div>
+
+                        </div>
+                    </div>
+
+                    <!-- ── Email Tab ────────────────────────────────────── -->
+                    <div id="tab-email" class="hidden p-6 space-y-4">
+                        <div class="bg-[#1a2238] p-5 rounded-2xl text-white">
+                            <h3 class="font-bold text-base mb-1">Outreach Hub</h3>
+                            <p class="text-xs opacity-60">Select a template and open a pre-filled Gmail compose window.</p>
+                        </div>
+                        <div id="email-no-selection" class="text-center text-slate-400 text-sm py-8">
+                            Select a lead first
+                        </div>
+                        <div id="email-form" class="hidden space-y-3">
+                            <div>
+                                <label class="label-xs">To</label>
+                                <input id="email-to" class="field-input bg-slate-50" readonly>
+                            </div>
+                            <div id="email-cc-row" class="hidden">
+                                <label class="label-xs">CC (secondary email)</label>
+                                <input id="email-cc" class="field-input bg-slate-50" readonly>
+                            </div>
+                            <div>
+                                <label class="label-xs">Template</label>
+                                <select id="email-template" onchange="applyTemplate()" class="field-input">
+                                    <option value="">— Select a Template —</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="label-xs">Subject</label>
+                                <input id="email-subject" class="field-input" placeholder="Subject line...">
+                            </div>
+                            <div>
+                                <label class="label-xs">Body (editable before sending)</label>
+                                <textarea id="email-body" rows="9" class="field-input resize-none"
+                                    placeholder="Compose your message or select a template above..."></textarea>
+                            </div>
+                            <button id="send-action-btn" onclick="handleSendAction()"
+                                class="w-full bg-[#1a2238] text-white py-3 rounded-xl font-bold text-sm hover:opacity-90 transition">
+                                Open in Gmail ↗
+                            </button>
+                            <button onclick="showEmailPreview()"
+                                class="w-full bg-[#f7f4ee] border border-[#dddfe2] text-[#1a2238] py-2.5 rounded-xl font-bold text-sm hover:bg-[#ede9df] transition text-[11px] tracking-wide">
+                                Show Formatted Email Preview ↓
+                            </button>
+                            <div id="email-preview-panel" class="hidden">
+                                <div class="flex justify-between items-center mb-2">
+                                    <span class="label-xs">Formatted Preview</span>
+                                    <button onclick="copyFormattedEmail()" id="copy-fmt-btn"
+                                        class="text-[9px] font-black uppercase tracking-widest bg-[#c5b358] text-[#1a2238] px-3 py-1.5 rounded-lg hover:opacity-90 transition">
+                                        Copy for Gmail
+                                    </button>
+                                </div>
+                                <iframe id="email-preview-frame"
+                                    style="width:100%;border:1px solid #dddfe2;border-radius:8px;background:white;"
+                                    frameborder="0" scrolling="yes"></iframe>
+                                <p class="text-[9px] text-slate-400 mt-1 leading-relaxed">
+                                    Click <strong>Copy for Gmail</strong>, then paste into your Gmail compose window.<br>
+                                    Edit the last 4 digits of the phone number before sending.
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- ── Call Script Tab ─────────────────────────────── -->
+                    <div id="tab-script" class="hidden p-6 overflow-y-auto text-[#1a2238]">
+                        <div id="script-loading" class="text-center text-slate-400 text-sm py-12">Loading script...</div>
+                        <div id="script-content" class="hidden prose prose-sm max-w-none"></div>
+                    </div>
+
+                    
+
+                </div>
+            </aside>
+        </main>
+    </div>
+
+    <!-- ── Activity Log Modal ──────────────────────────────────────────── -->
+    <div id="activity-log-modal" class="hidden fixed inset-0 bg-black/50 z-[200] flex items-start justify-center pt-10 px-4">
+        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[80vh] flex flex-col">
+            <div class="bg-[#1a2238] rounded-t-2xl px-6 py-4 flex items-center justify-between">
+                <div>
+                    <h2 class="text-white font-black text-base tracking-tight">Activity Log</h2>
+                    <p class="text-[#c5b358] text-[10px] font-bold uppercase tracking-widest">All activity across all leads</p>
+                </div>
+                <button onclick="closeActivityLog()" class="text-white/60 hover:text-white text-xl font-bold">✕</button>
+            </div>
+            <div class="px-6 py-4 border-b border-[#dddfe2] flex flex-wrap items-end gap-3">
+                <div><label class="label-xs">Date</label>
+                    <input type="date" id="log-date-filter" class="field-input" onchange="fetchActivityLog()"></div>
+                <button onclick="setLogToday()" class="text-[9px] font-black uppercase tracking-widest bg-[#f7f4ee] border border-[#dddfe2] text-[#1a2238] px-3 py-2 rounded-lg hover:bg-[#ede9df] transition">Today</button>
+                <button onclick="sendLogByEmail()" class="ml-auto text-[9px] font-black uppercase tracking-widest bg-[#c5b358] text-[#1a2238] px-4 py-2 rounded-lg hover:opacity-90 transition">Send Log by Email ↗</button>
+            </div>
+            <div id="activity-log-list" class="overflow-y-auto flex-1 px-6 py-4 space-y-2">
+                <p class="text-slate-400 text-xs text-center py-8">Loading...</p>
+            </div>
+        </div>
+    </div>
+
     <script>
-      const SUPABASE_URL = 'https://uwauubdwvxpfgfkagqqx.supabase.co';
-      const SUPABASE_ANON_KEY = 'sb_publishable_inrERwvaOAuOJNOSqXHBPQ_J6VCxrB9';
 
-      if (!window.supabaseClient) {
-        const supabaseLib = window.supabase;
-        window.supabaseClient = supabaseLib.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
-          auth: { persistSession: true, autoRefreshToken: true },
-        });
-      }
 
-      const statusEl = document.getElementById('status');
-      const listEl = document.getElementById('list');
+        // Wrap any Supabase query builder with an 8-second hard timeout.
+        // Auth errors (JWT expired, 401) trigger auto sign-out with a clear message.
+        // Timeouts show the connection-lost banner + a toast so the user always knows.
+        let _connLostCount = 0;
+        async function sbFetch(queryBuilder) {
+            const TIMEOUT_SENTINEL = '__SB_TIMEOUT__';
+            const timeout = new Promise((_, reject) =>
+                setTimeout(() => reject(new Error(TIMEOUT_SENTINEL)), 45000)
+            );
+            try {
+                const result = await Promise.race([queryBuilder, timeout]);
+                // On success, clear connection-lost state
+                _connLostCount = 0;
+                const banner = document.getElementById('conn-banner');
+                if (banner) banner.style.display = 'none';
 
-      async function run() {
-        statusEl.textContent = 'Fetching leads…';
-
-        const { data, error } = await window.supabaseClient
-          .from('leads')
-          .select('id, full_name, email, created_at')
-          .order('created_at', { ascending: false })
-          .limit(20);
-
-        if (error) {
-          statusEl.textContent = 'ERROR: ' + error.message;
-          console.error(error);
-          return;
+                // Detect auth/JWT errors
+                if (result?.error) {
+                    const msg  = (result.error.message || '').toLowerCase();
+                    const code = result.error.code || '';
+                    const isAuthError = msg.includes('jwt') || msg.includes('not authenticated') ||
+                                        msg.includes('invalid api key') || msg.includes('unauthorized') ||
+                                        code === 'PGRST301' || result.status === 401;
+                    if (isAuthError) {
+                        showToast('Session expired — please sign in again.', true);
+                        setTimeout(() => handleLogout(), 2000);
+                    }
+                }
+                return result;
+            } catch (e) {
+                const isTimeout = e.message === TIMEOUT_SENTINEL;
+                if (isTimeout) {
+                    _connLostCount++;
+                    // Show banner after first timeout — always visible, not just in the panel
+                    const banner = document.getElementById('conn-banner');
+                    if (banner) banner.style.display = 'block';
+                    showToast('Connection lost — see banner above', true);
+                }
+                const msg = isTimeout
+                    ? 'Connection timed out — Supabase not responding.'
+                    : e.message;
+                return { data: null, error: { message: msg } };
+            }
         }
 
-        const rows = data || [];
-        statusEl.textContent = `OK. Rows: ${rows.length}`;
+        // Reconnect: refresh session token and test connectivity.
+        // Every network call is wrapped with its own timeout so nothing can hang.
+        let _reconnecting = false;
+        async function reconnectSupabase() {
+            if (_reconnecting) return; // prevent double-tap
+            _reconnecting = true;
+            const banner = document.getElementById('conn-banner');
+            const FAIL_HTML = '⚠ Still disconnected. <button onclick="reconnectSupabase()" style="margin-left:16px;background:#fff;color:#7f1d1d;border:none;border-radius:999px;padding:3px 14px;font-size:10px;font-weight:900;cursor:pointer;">Try again</button> &nbsp; <button onclick="handleLogout()" style="margin-left:8px;background:transparent;color:#fff;border:1px solid rgba(255,255,255,0.4);border-radius:999px;padding:3px 10px;font-size:10px;cursor:pointer;">Sign out &amp; reload</button>';
 
-        listEl.innerHTML = '';
-        for (const row of rows) {
-          const li = document.createElement('li');
-          li.textContent =
-            `${row.full_name ?? '(no name)'} — ${row.email ?? '(no email)'} ` +
-            `(${row.created_at ?? 'no created_at'})`;
-          listEl.appendChild(li);
+            if (banner) banner.innerHTML = '⏳ Reconnecting&hellip;';
+            try {
+                // Step 1: refresh session — hard 10s timeout
+                const refreshResult = await Promise.race([
+                    window.supabaseClient.auth.refreshSession(),
+                    new Promise((_, reject) => setTimeout(() => reject(new Error('refresh timeout')), 10000))
+                ]);
+                if (refreshResult?.error) throw refreshResult.error;
+
+                // Step 2: lightweight ping — hard 8s timeout
+                const pingResult = await Promise.race([
+                    window.supabaseClient.from('crm_settings').select('key').limit(1),
+                    new Promise((_, reject) => setTimeout(() => reject(new Error('ping timeout')), 8000))
+                ]);
+                if (pingResult?.error) throw pingResult.error;
+
+                // Success
+                if (banner) banner.style.display = 'none';
+                _connLostCount = 0;
+                _reconnecting = false;
+                showToast('Reconnected ✓');
+                fetchLeads();
+            } catch (err) {
+                console.warn('Reconnect failed:', err.message);
+                _reconnecting = false;
+                if (banner) banner.innerHTML = FAIL_HTML;
+                showToast('Still disconnected — try signing out and back in', true);
+            }
         }
-      }
+                    window.reconnectSupabase = reconnectSupabase;
 
-      run();
+        // Check that the current session is still valid before attempting writes.
+        // Returns true if good, false + shows error if session expired.
+             async function checkSession() {
+              // Wait if init in progress
+              if (window._initInProgress) {
+                await new Promise(r => setTimeout(r, 300));
+              }
+
+              try {
+                const result = await window.supabaseClient.auth.getSession();
+                const session = result?.data?.session ?? null;
+
+                if (!session) {
+                  showToast('Session expired — please sign in again.', true);
+                  setTimeout(() => handleLogout(), 1500);
+                  return false;
+                }
+
+                return true;
+              } catch (e) {
+                console.error('checkSession threw:', e);
+                showToast('Session check failed — please sign in again.', true);
+                setTimeout(() => handleLogout(), 1500);
+                return false;
+              }
+            }
+
+        let allLeads = [], activeLead = null, currentUser = null, emailTemplates = [];
+        let sortConfig = { key: 'followup', dir: 'asc' };
+        let selectedActivityType = 'Call';
+
+        const TYPE_COLOURS = {
+            'Call':'bg-blue-100 text-blue-700','Email':'bg-amber-100 text-amber-700',
+            'Meeting':'bg-emerald-100 text-emerald-700','Discovery Call':'bg-purple-100 text-purple-700','Note':'bg-slate-100 text-slate-500'
+        };
+        const FLOW_COLOURS = {
+            'New':                    'bg-slate-100 text-slate-500',
+            'Called':                 'bg-amber-100 text-amber-700',
+            'Emailed':                'bg-blue-100 text-blue-700',
+            'Sent LinkedIn Message':  'bg-indigo-100 text-indigo-700',
+            'Sent Follow-Up Email':   'bg-orange-100 text-orange-700',
+            'Discovery Call':         'bg-emerald-100 text-emerald-700',
+        };
+        const FLOW_ABBREV = {
+            'New':                    'New',
+            'Called':                 'Called',
+            'Emailed':                'Emailed',
+            'Sent LinkedIn Message':  'LinkedIn',
+            'Sent Follow-Up Email':   'Follow-Up',
+            'Discovery Call':         'Discovery',
+        };
+        // ── Flow presets (defaults overridden from Supabase crm_settings) ──────
+        let crmSettings = { linkedin_followup_days: 4, email_followup_days: 8 };
+
+        function addBusinessDays(startDateStr, n) {
+            const d = new Date(startDateStr + 'T12:00:00');
+            let added = 0;
+            while (added < n) {
+                d.setDate(d.getDate() + 1);
+                const dow = d.getDay();
+                if (dow !== 0 && dow !== 6) added++;
+            }
+            return d.toISOString().slice(0, 10);
+        }
+
+        async function loadSettings() {
+            const { data, error } = await sbFetch(window.supabaseClient.from('crm_settings').select('*'));
+            if (error || !data) return;
+            data.forEach(row => {
+                const v = parseInt(row.value, 10);
+                if (!isNaN(v) && row.key in crmSettings) crmSettings[row.key] = v;
+            });
+            document.getElementById('setting-linkedin-days').value = crmSettings.linkedin_followup_days;
+            document.getElementById('setting-email-days').value    = crmSettings.email_followup_days;
+        }
+
+        async function saveSettings() {
+            const linkedinDays = parseInt(document.getElementById('setting-linkedin-days').value, 10);
+            const emailDays    = parseInt(document.getElementById('setting-email-days').value, 10);
+            if (isNaN(linkedinDays) || isNaN(emailDays) || linkedinDays < 1 || emailDays < 1) {
+                showToast('Enter valid day values', true); return;
+            }
+            const rows = [
+                { key: 'linkedin_followup_days', value: String(linkedinDays), label: 'Days after first email → LinkedIn message' },
+                { key: 'email_followup_days',    value: String(emailDays),    label: 'Days after LinkedIn sent → follow-up email' }
+            ];
+            const { error } = await sbFetch(window.supabaseClient.from('crm_settings').upsert(rows));
+            if (error) { showToast('Save failed: ' + error.message, true); return; }
+            crmSettings.linkedin_followup_days = linkedinDays;
+            crmSettings.email_followup_days    = emailDays;
+            closeSettingsModal();
+            showToast('Presets saved ✓');
+        }
+
+        function openSettingsModal() {
+            document.getElementById('setting-linkedin-days').value = crmSettings.linkedin_followup_days;
+            document.getElementById('setting-email-days').value    = crmSettings.email_followup_days;
+            document.getElementById('settings-modal').classList.remove('hidden');
+        }
+        function closeSettingsModal() {
+            document.getElementById('settings-modal').classList.add('hidden');
+        }
+
+            // ADD THIS function (place it ABOVE openFieldUrl)
+            function normalizeUrl(raw) {
+              if (!raw) return null;
+
+              let s = String(raw).trim();
+
+              // Fix accidental duplicate like: https://https:www...
+              s = s.replace(/^https?:\/\/https?:\/\//i, 'https://');
+
+              // Fix missing slashes: "https:gracepointpublishing.com" -> "https://gracepointpublishing.com"
+              // and: "https:www.gryphonhouse.com" -> "https://www.gryphonhouse.com"
+              s = s.replace(/^(https?):\/?([^/])/, '$1://$2');
+
+              // If user included a scheme, keep it (http/https only)
+              if (/^https?:\/\//i.test(s)) return s;
+
+              // If user entered domain/path without scheme, default to https
+              if (/^[a-z0-9.-]+\.[a-z]{2,}([\/?#].*)?$/i.test(s)) {
+                return `https://${s}`;
+              }
+
+              // If user entered starting with "www.", add https://
+              if (/^www\./i.test(s)) {
+                return `https://${s}`;
+              }
+
+              // Otherwise reject to avoid window.open SyntaxError
+              return null;
+            }
+
+            // REPLACE THIS function with the one below
+            function openFieldUrl(inputId) {
+              const el = document.getElementById(inputId);
+              const raw = el?.value;
+
+              const url = normalizeUrl(raw);
+              if (!url) {
+                alert('Please enter a valid URL. Use https://... or a domain like example.com');
+                return;
+              }
+
+              window.open(url, '_blank', 'noopener,noreferrer');
+            }
+        
+
+        function updateLinkedInAction(lead) {
+            const card = document.getElementById('linkedin-action-card');
+            if (!card) return;
+            const show = lead && lead.sales_flow_stage === 'Emailed' && lead.linkedin_url;
+            card.classList.toggle('hidden', !show);
+        }
+
+        async function markLinkedInSent() {
+            if (!activeLead) return;
+            if (!await checkSession()) return;
+            const btn = document.getElementById('linkedin-send-btn');
+            if (btn) { btn.disabled = true; btn.textContent = 'Sending…'; }
+
+            // 1. Copy LinkedIn canned message to clipboard
+            const tmpl = emailTemplates.find(t => t.key === 'linkedin_day4');
+            if (tmpl) {
+                const fill = s => (s || '')
+                    .replace(/\{first_name\}/g,  activeLead.first_name || '')
+                    .replace(/\{company\}/g,     activeLead.company_name || 'your company')
+                    .replace(/\{sender_name\}/g, currentUserFullName())
+                    .replace(/\{signature\}/g,   signature());
+                try { await navigator.clipboard.writeText(fill(tmpl.body)); } catch(e) {}
+            }
+
+            // 2 & 3. Log to Supabase BEFORE opening LinkedIn — keeps fetch in foreground
+            const today = new Date().toISOString().slice(0, 10);
+            const followUpDate = addBusinessDays(today, crmSettings.email_followup_days);
+
+            await sbFetch(window.supabaseClient.from('activity_logs').insert({
+                lead_id: activeLead.id,
+                content: 'Sent LinkedIn message',
+                activity_type: 'Sent LinkedIn Message',
+                performed_by: currentUser?.email || 'Unknown'
+            }));
+
+            const { error } = await sbFetch(window.supabaseClient.from('leads').update({
+                sales_flow_stage:  'Sent LinkedIn Message',
+                next_follow_up_at: followUpDate,
+                last_contacted_at: new Date().toISOString()
+            }).eq('id', activeLead.id));
+
+            if (error) {
+                showToast('Update failed: ' + error.message, true);
+                if (btn) { btn.disabled = false; btn.textContent = 'Send LinkedIn Message & Mark Sent'; }
+                return;
+            }
+
+            // Update in-memory lead
+            activeLead.sales_flow_stage  = 'Sent LinkedIn Message';
+            activeLead.next_follow_up_at = followUpDate;
+            document.getElementById('edit-flow').value    = 'Sent LinkedIn Message';
+            document.getElementById('edit-followup').value = followUpDate;
+
+            updateLinkedInAction(activeLead);
+            loadNotes(activeLead.id);
+            fetchLeads();
+
+            // Open LinkedIn AFTER all Supabase writes complete — tab goes background only now
+            if (activeLead.linkedin_url) window.open(activeLead.linkedin_url, '_blank');
+            showToast('LinkedIn message copied ✓ Follow-up set for ' + followUpDate);
+        }
+
+        const STATUS_COLOURS = {
+            'Prospect':'bg-slate-100 text-slate-500','PROSPECT':'bg-slate-100 text-slate-500',
+            'Warm':'bg-amber-100 text-amber-700','WARM LEAD':'bg-amber-100 text-amber-700',
+            'Discussion':'bg-blue-100 text-blue-700','IN TALKS':'bg-blue-100 text-blue-700',
+            'Won':'bg-emerald-100 text-emerald-700','WON':'bg-emerald-100 text-emerald-700',
+            'Lost':'bg-red-100 text-red-400','LOST':'bg-red-100 text-red-400'
+        };
+
+            // ── Auth ──────────────────────────────────────────────────────────────
+
+            // ── Timer helpers ────────────────────────────────────────────────────
+            function startKeepaliveTimers() {
+                stopKeepaliveTimers();
+                // Refresh JWT every 30 min so idle sessions stay alive
+                window.__keepaliveTimer = setInterval(async () => {
+                    try {
+                        const { error } = await window.supabaseClient.auth.refreshSession();
+                        if (error) {
+                            console.warn('Keepalive refresh failed:', error.message);
+                            const msg = (error.message || '').toLowerCase();
+                            if (msg.includes('refresh') || msg.includes('invalid')) {
+                                stopKeepaliveTimers();
+                                showToast('Session expired — please sign in again.', true);
+                                setTimeout(() => handleLogout(), 2000);
+                            }
+                        } else {
+                            console.log('Session keepalive OK at', new Date().toLocaleTimeString());
+                        }
+                    } catch(e) { console.warn('Keepalive error (non-critical):', e); }
+                }, 30 * 60 * 1000);
+
+                // Warm ping every 2 min — keeps Supabase compute warm on free tier
+                window.__warmPingTimer = setInterval(async () => {
+                    try {
+                        await window.supabaseClient.from('crm_settings').select('key').limit(1);
+                        console.log('Warm ping OK at', new Date().toLocaleTimeString());
+                    } catch(e) { console.warn('Warm ping error (non-critical):', e); }
+                }, 2 * 60 * 1000);
+            }
+
+            function stopKeepaliveTimers() {
+                if (window.__keepaliveTimer) { clearInterval(window.__keepaliveTimer); window.__keepaliveTimer = null; }
+                if (window.__warmPingTimer)  { clearInterval(window.__warmPingTimer);  window.__warmPingTimer  = null; }
+            }
+
+            // ── Post-login init ──────────────────────────────────────────────────
+            // Runs once per sign-in. Guards against concurrent calls.
+            let _initInProgress = false;
+            async function postLoginInit(user) {
+                if (_initInProgress) return;
+                _initInProgress = true;
+                try {
+                    currentUser = user;
+                    window.currentUser = user;
+
+                    document.getElementById('login-screen').classList.add('hidden');
+                    document.getElementById('app-interface').classList.remove('hidden');
+                    document.getElementById('user-badge').textContent = user.email;
+
+                    // Load data sequentially
+                    await loadEmailTemplates();
+                    await loadCallScript();
+                    await loadSettings();
+                    await fetchLeads();
+
+                    // Start timers only after successful init
+                    startKeepaliveTimers();
+                } catch(e) {
+                    console.error('postLoginInit failed:', e);
+                    showToast('Login setup failed — please try again.', true);
+                    handleLogout();
+                } finally {
+                    _initInProgress = false;
+                }
+            }
+
+            // ── Bootstrap: restore session on page load ───────────────────────
+            async function bootstrapPage() {
+                const { data } = await window.supabaseClient.auth.getSession();
+                if (data?.session) {
+                    await postLoginInit(data.session.user);
+                }
+            }
+
+            // ── Auth state listener ──────────────────────────────────────────────
+            // Only handle real transitions. Ignore TOKEN_REFRESHED, INITIAL_SESSION, etc.
+            if (window.__authSub) window.__authSub();
+            window.__authSub = window.supabaseClient.auth.onAuthStateChange((event, session) => {
+                if (event === 'SIGNED_IN') {
+                    // bootstrapPage handles the initial load; this fires on subsequent sign-ins
+                    if (!currentUser) postLoginInit(session.user);
+                } else if (event === 'SIGNED_OUT' || event === 'USER_DELETED') {
+                    currentUser = null;
+                    leads = [];
+                    allLeads = [];
+                    stopKeepaliveTimers();
+                    document.getElementById('login-screen').classList.remove('hidden');
+                    document.getElementById('app-interface').classList.add('hidden');
+                } else {
+                    // TOKEN_REFRESHED, INITIAL_SESSION, PASSWORD_RECOVERY — ignore
+                    console.log('Ignoring transient auth event:', event);
+                }
+            });
+
+            // Run bootstrap
+            bootstrapPage();
+
+            // ── Login button ─────────────────────────────────────────────────────
+            document.getElementById('btn-login').addEventListener('click', async () => {
+                const email    = document.getElementById('login-email').value.trim();
+                const password = document.getElementById('login-password').value;
+                const errEl    = document.getElementById('login-error');
+                errEl.classList.add('hidden');
+
+                if (!email || !password) {
+                    errEl.textContent = 'Enter your email and password.';
+                    errEl.classList.remove('hidden');
+                    return;
+                }
+
+                const btn = document.getElementById('btn-login');
+                btn.disabled    = true;
+                btn.textContent = 'Signing in…';
+
+                const { data, error } = await window.supabaseClient.auth.signInWithPassword({ email, password });
+
+                btn.disabled    = false;
+                btn.textContent = 'Sign In';
+
+                if (error) {
+                    errEl.textContent = error.message || 'Invalid email or password.';
+                    errEl.classList.remove('hidden');
+                    return;
+                }
+                // onAuthStateChange SIGNED_IN fires → postLoginInit handles the rest
+            });
+
+            // ── Logout ───────────────────────────────────────────────────────────
+            function handleLogout() {
+                currentUser  = null;
+                allLeads     = [];
+                activeLead   = null;
+                stopKeepaliveTimers();
+                document.getElementById('login-email').value = '';
+                document.getElementById('login-password').value = '';
+                document.getElementById('login-error').classList.add('hidden');
+                document.getElementById('app-interface').classList.add('hidden');
+                document.getElementById('login-screen').classList.remove('hidden');
+                // Fire signOut in background — never await
+                window.supabaseClient.auth.signOut().catch(e => console.warn('signOut error (non-critical):', e));
+            }
+            window.handleLogout = handleLogout;
+        async function loadEmailTemplates() {
+            const { data, error } = await window.supabaseClient.from('email_templates').select('*').order('sort_order');
+            if (error) { console.error(error); return; }
+            emailTemplates = data || [];
+            const sel = document.getElementById('email-template');
+            sel.innerHTML = '<option value="">\u2014 Select a Template \u2014</option>';
+            emailTemplates.forEach(t => {
+                const opt = document.createElement('option');
+                opt.value = t.key; opt.textContent = t.name; sel.appendChild(opt);
+            });
+        }
+        let callScriptMarkdown = '';
+
+        function currentUserMoceniusEmail() {
+            const e = (currentUser?.email || '').toLowerCase();
+            if (e.includes('john'))   return 'john@mocenius.com';
+            if (e.includes('morgan')) return 'morgan@mocenius.com';
+            return currentUser?.email || '';
+        }
+
+        async function loadCallScript() {
+            const userEmail = currentUserMoceniusEmail();
+            const { data, error } = await sbFetch(
+                window.supabaseClient.from('call_scripts').select('*').eq('key','touch_1').eq('user_email', userEmail).single()
+            );
+            if (error || !data) { console.error('loadCallScript:', error); return; }
+            callScriptMarkdown = data.body_markdown;
+            document.getElementById('script-loading').classList.add('hidden');
+            document.getElementById('script-content').classList.remove('hidden');
+            renderCallScript();
+        }
+
+        function currentUserFullName() {
+            const meta = currentUser?.user_metadata || {};
+            return meta.full_name || meta.display_name || currentUser?.email || 'Your Name';
+        }
+
+        function renderCallScript() {
+            if (!callScriptMarkdown) return;
+            const firstName = activeLead ? (activeLead.first_name || '[First Name]') : '[First Name]';
+            const company   = activeLead ? (activeLead.company_name || '[Company Name]') : '[Company Name]';
+            let md = callScriptMarkdown
+                .replace(/\[First Name\]/g, '**' + firstName + '**')
+                .replace(/\[Company Name\]/g, '**' + company + '**');
+            const content = document.getElementById('script-content');
+            content.innerHTML = marked.parse(md);
+            content.querySelectorAll('h2').forEach(el => el.style.cssText='font-size:16px;font-weight:900;color:#1a2238;margin:0 0 12px;');
+            content.querySelectorAll('h3').forEach(el => el.style.cssText='font-size:13px;font-weight:800;color:#1a2238;margin:20px 0 8px;text-transform:uppercase;letter-spacing:.05em;');
+            content.querySelectorAll('blockquote').forEach(el => el.style.cssText='background:#fffbe6;border-left:3px solid #c5b358;padding:12px 16px;margin:8px 0;border-radius:0 8px 8px 0;font-style:italic;');
+            content.querySelectorAll('p').forEach(el => el.style.cssText='font-size:13px;color:#1a2238;line-height:1.6;margin-bottom:8px;');
+            content.querySelectorAll('li').forEach(el => el.style.cssText='font-size:12px;color:#4a5068;margin-bottom:4px;');
+            content.querySelectorAll('hr').forEach(el => el.style.cssText='border:none;border-top:1px solid #dddfe2;margin:16px 0;');
+        }
+
+        // ── Data ──────────────────────────────────────────────────────────────
+            async function fetchLeads() {
+              const tbody = document.getElementById('lead-table-body');
+              tbody.innerHTML = '<tr><td colspan="4" class="p-8 text-center text-slate-400 text-sm">Loading…</td></tr>';
+
+            const { data, error } = await window.supabaseClient
+              .from('leads')
+              .select('*')
+              .order('created_at', { ascending: false });
+
+              if (error) {
+                console.error('fetchLeads error:', error);
+                tbody.innerHTML = `<tr><td colspan="4" class="p-8 text-center text-red-400 text-xs font-bold">
+                  ⚠ Database error: ${error.message || error.code || JSON.stringify(error)}
+                </td></tr>`;
+                return;
+              }
+
+              allLeads = data || [];
+              applyFiltersAndSort();
+            }
+        function applyFiltersAndSort() {
+            const term = (document.getElementById('global-search').value || '').toLowerCase();
+            const filterField = document.getElementById('filter-field').value;
+            const filterValue = document.getElementById('filter-value').value;
+            let leads = allLeads.filter(l => {
+                const name = ((l.first_name||'') + ' ' + (l.last_name||'')).toLowerCase();
+                const matchSearch = !term || name.includes(term)||(l.company_name||'').toLowerCase().includes(term)
+                    ||(l.status||'').toLowerCase().includes(term)||(l.email||'').toLowerCase().includes(term)
+                    ||(l.assigned_to||'').toLowerCase().includes(term)||(l.industry||'').toLowerCase().includes(term)
+                    ||(l.source_tag||'').toLowerCase().includes(term);
+                const matchFilter = !filterField || !filterValue || (l[filterField]||'').toLowerCase() === filterValue.toLowerCase();
+                return matchSearch && matchFilter;
+            });
+            leads.sort((a,b) => {
+                let av,bv;
+                if (sortConfig.key==='name') { av=((a.first_name||'')+' '+(a.last_name||'')).toLowerCase(); bv=((b.first_name||'')+' '+(b.last_name||'')).toLowerCase(); }
+                else if (sortConfig.key==='company') { av=(a.company_name||'').toLowerCase(); bv=(b.company_name||'').toLowerCase(); }
+                else if (sortConfig.key==='followup') { av=a.next_follow_up_at||'9999'; bv=b.next_follow_up_at||'9999'; }
+                else if (sortConfig.key==='flow') {
+                    const order=['New','Called','Emailed','Sent LinkedIn Message','Sent Follow-Up Email','Discovery Call'];
+                    av=order.indexOf(a.sales_flow_stage||''); bv=order.indexOf(b.sales_flow_stage||'');
+                    av=av<0?99:av; bv=bv<0?99:bv;
+                }
+                else if (sortConfig.key==='status') { av=(a.status||'').toLowerCase(); bv=(b.status||'').toLowerCase(); }
+                const cmp = av<bv?-1:av>bv?1:0; return sortConfig.dir==='asc'?cmp:-cmp;
+            });
+            const countEl = document.getElementById('filter-count');
+            countEl.textContent = filterField && filterValue ? `${leads.length} of ${allLeads.length} leads` : `${allLeads.length} leads`;
+            renderLeads(leads);
+        }
+        function renderLeads(leads) {
+            const tbody = document.getElementById('lead-table-body');
+            tbody.innerHTML = '';
+            if (!leads.length) { tbody.innerHTML='<tr><td colspan="5" class="p-8 text-center text-slate-400 text-sm">No leads found.</td></tr>'; return; }
+            leads.forEach(l => {
+                const name = [l.first_name,l.last_name].filter(Boolean).join(' ')||'\u2014';
+                const isActive = activeLead && activeLead.id === l.id;
+                const statusCls = STATUS_COLOURS[l.status]||STATUS_COLOURS['Prospect'];
+                const flowStage = l.sales_flow_stage||'';
+                const flowCls = FLOW_COLOURS[flowStage]||'bg-slate-50 text-slate-400';
+                const flowLabel = FLOW_ABBREV[flowStage]||'—';
+                const followUp = l.next_follow_up_at ? new Date(l.next_follow_up_at+'T12:00:00').toLocaleDateString('en-US',{month:'short',day:'numeric'}) : '\u2014';
+                const today = new Date().toISOString().slice(0,10);
+                const overdue = l.next_follow_up_at && l.next_follow_up_at < today;
+                const tr = document.createElement('tr');
+                tr.className = (isActive?'active-row ':'')+'cursor-pointer hover:bg-slate-50 transition';
+                tr.onclick = () => selectLead(l);
+                tr.innerHTML = `<td class="p-3 pl-4"><div class="font-bold text-[12px] text-[#1a2238] truncate max-w-[120px]">${name}</div><div class="text-[9px] text-slate-400 truncate max-w-[120px]">${l.email||''}</div></td>
+                    <td class="p-3 text-[11px] text-slate-600 truncate max-w-[100px]">${l.company_name||'\u2014'}</td>
+                    <td class="p-2 text-[10px] ${overdue?'text-red-500 font-bold':'text-slate-500'}">${followUp}</td>
+                    <td class="p-2 text-center"><span class="text-[9px] font-black uppercase px-2 py-0.5 rounded-full ${statusCls}">${l.status||'Prospect'}</span></td>
+                    <td class="p-2 text-center"><span class="text-[9px] font-black uppercase px-2 py-0.5 rounded-full ${flowCls}">${flowLabel}</span></td>`;
+                tbody.appendChild(tr);
+            });
+        }
+        function handleSort(key) {
+            if (sortConfig.key===key) sortConfig.dir = sortConfig.dir==='asc'?'desc':'asc';
+            else { sortConfig.key=key; sortConfig.dir='asc'; }
+            ['name','company','followup','status','flow'].forEach(k => { const el=document.getElementById('sort-icon-'+k); if(el) el.textContent=k===key?(sortConfig.dir==='asc'?'\u25b2':'\u25bc'):''; });
+            applyFiltersAndSort();
+        }
+
+        // ── Filter ────────────────────────────────────────────────────────────
+        function onFilterFieldChange() {
+            const field = document.getElementById('filter-field').value;
+            const valSel = document.getElementById('filter-value');
+            const clearBtn = document.getElementById('filter-clear-btn');
+            if (!field) { clearFilter(); return; }
+            const unique = [...new Set(allLeads.map(l=>l[field]).filter(v=>v&&v.toString().trim()))].sort();
+            valSel.innerHTML = '<option value="">\u2014 All \u2014</option>';
+            unique.forEach(v => { const opt=document.createElement('option'); opt.value=v; opt.textContent=v; valSel.appendChild(opt); });
+            valSel.classList.remove('hidden'); clearBtn.classList.remove('hidden'); applyFiltersAndSort();
+        }
+        function clearFilter() {
+            document.getElementById('filter-field').value='';
+            document.getElementById('filter-value').innerHTML='<option value="">\u2014 All \u2014</option>';
+            document.getElementById('filter-value').classList.add('hidden');
+            document.getElementById('filter-clear-btn').classList.add('hidden');
+            document.getElementById('filter-count').textContent='';
+            applyFiltersAndSort();
+        }
+
+        // ── Lead Detail ───────────────────────────────────────────────────────
+        function selectLead(lead) {
+            activeLead = lead;
+            applyFiltersAndSort();
+            document.getElementById('lead-detail-form').classList.remove('hidden');
+            document.getElementById('no-selection-msg').classList.add('hidden');
+            document.getElementById('edit-first').value    = lead.first_name       ||'';
+            document.getElementById('edit-last').value     = lead.last_name        ||'';
+            document.getElementById('edit-status').value   = lead.status           ||'Prospect';
+            document.getElementById('edit-priority').value = lead.priority_level   ||'';
+            document.getElementById('edit-flow').value    = lead.sales_flow_stage  ||'';
+            document.getElementById('edit-followup').value = lead.next_follow_up_at||'';
+            document.getElementById('edit-email').value    = lead.email            ||'';
+            document.getElementById('edit-phone').value    = lead.phone_number     ||'';
+            document.getElementById('edit-email2').value   = lead.secondary_email  ||'';
+            document.getElementById('edit-phone2').value   = lead.secondary_phone  ||'';
+            document.getElementById('edit-company').value  = lead.company_name     ||'';
+            document.getElementById('edit-job').value      = lead.job_title        ||'';
+            document.getElementById('edit-industry').value = lead.industry         ||'';
+            document.getElementById('edit-source').value   = lead.source_tag       ||'';
+            document.getElementById('edit-linkedin').value = lead.linkedin_url     ||'';
+            document.getElementById('edit-website').value  = lead.website_url      ||'';
+            document.getElementById('edit-timezone').value = lead.timezone         ||'';
+            document.getElementById('edit-assigned').value = lead.assigned_to      ||'';
+            document.getElementById('edit-notes').value    = lead.notes            ||'';
+            document.getElementById('email-to').value = lead.email||'';
+            const ccVal = lead.secondary_email||'';
+            document.getElementById('email-cc').value = ccVal;
+            document.getElementById('email-cc-row').classList.toggle('hidden',!ccVal);
+            document.getElementById('email-template').value=''; document.getElementById('email-subject').value=''; document.getElementById('email-body').value='';
+            document.getElementById('email-preview-panel').classList.add('hidden');
+            document.getElementById('email-form').classList.remove('hidden');
+            document.getElementById('email-no-selection').classList.add('hidden');
+            updateSendButton('');
+            loadNotes(lead.id);
+            renderCallScript();
+            updateLinkedInAction(lead);
+        }
+        async function saveLeadChanges() {
+            if (!activeLead) return;
+            if (!await checkSession()) return;
+            const btn = document.getElementById('save-lead-btn');
+            if (btn) { btn.disabled = true; btn.textContent = 'Saving…'; }
+            const updates = {
+                first_name:       document.getElementById('edit-first').value.trim()||null,
+                last_name:        document.getElementById('edit-last').value.trim()||null,
+                status:           document.getElementById('edit-status').value||null,
+                priority_level:   document.getElementById('edit-priority').value||null,
+                sales_flow_stage: document.getElementById('edit-flow').value||null,
+                next_follow_up_at:document.getElementById('edit-followup').value||null,
+                email:            document.getElementById('edit-email').value.trim()||null,
+                phone_number:     document.getElementById('edit-phone').value.trim()||null,
+                secondary_email:  document.getElementById('edit-email2').value.trim()||null,
+                secondary_phone:  document.getElementById('edit-phone2').value.trim()||null,
+                company_name:     document.getElementById('edit-company').value.trim()||null,
+                job_title:        document.getElementById('edit-job').value.trim()||null,
+                industry:         document.getElementById('edit-industry').value.trim()||null,
+                source_tag:       document.getElementById('edit-source').value.trim()||null,
+                linkedin_url:     document.getElementById('edit-linkedin').value.trim()||null,
+                website_url:      document.getElementById('edit-website').value.trim()||null,
+                timezone:         document.getElementById('edit-timezone').value||null,
+                assigned_to:      document.getElementById('edit-assigned').value.trim()||null,
+                notes:            document.getElementById('edit-notes').value.trim()||null,
+                last_modified_by: currentUser?.email||null,
+            };
+            const { error: leadSaveError } = await sbFetch(window.supabaseClient.from('leads').update(updates).eq('id',activeLead.id));
+            console.log('saveLeadChanges Supabase result:', { error: leadSaveError });
+            if (leadSaveError) { console.error('saveLeadChanges error:', leadSaveError); document.getElementById('save-error').textContent=leadSaveError.message; document.getElementById('save-error').classList.remove('hidden'); if (btn) { btn.disabled = false; btn.textContent = 'Save All Changes'; } showToast('Save failed: ' + leadSaveError.message, true); return; }
+            document.getElementById('save-error').classList.add('hidden');
+            if (btn) { btn.disabled = false; btn.textContent = 'Save All Changes'; }
+            Object.assign(activeLead,updates); showToast('Saved \u2713'); fetchLeads();
+        }
+        async function deleteActiveLead() {
+            if (!activeLead) return;
+            const name = [activeLead.first_name,activeLead.last_name].filter(Boolean).join(' ')||'this contact';
+            if (!confirm('Delete '+name+'? This cannot be undone.')) return;
+            const { error } = await sbFetch(window.supabaseClient.from('leads').delete().eq('id',activeLead.id));
+            if (error) { showToast('Delete failed: '+error.message,true); return; }
+            activeLead=null;
+            document.getElementById('lead-detail-form').classList.add('hidden');
+            document.getElementById('no-selection-msg').classList.remove('hidden');
+            showToast('Contact deleted'); fetchLeads();
+        }
+        function clearField(id) { document.getElementById(id).value=''; }
+
+        // ── Activity Log (per lead) ───────────────────────────────────────────
+        function selectActivityType(btn) {
+            document.querySelectorAll('.activity-type-btn').forEach(b=>b.classList.remove('selected'));
+            btn.classList.add('selected'); selectedActivityType=btn.dataset.type;
+        }
+        async function loadNotes(id) {
+            const { data, error } = await sbFetch(window.supabaseClient.from('activity_logs').select('*').eq('lead_id',id).order('created_at',{ascending:false}));
+            const list = document.getElementById('activity-list');
+            if (!list) return;
+            if (error) {
+                const isAuth = (error.message||'').toLowerCase().includes('jwt') || (error.message||'').toLowerCase().includes('not authenticated');
+                const hint = isAuth ? ' — your session may have expired. Sign out and back in.' : '. Try reloading.';
+                list.innerHTML=`<p class="text-[10px] text-red-400 text-center py-4">⚠ Could not load activity${hint}</p>`;
+                return;
+            }
+            list.innerHTML='';
+            if (!data||!data.length) { list.innerHTML='<p class="text-[10px] text-slate-400 text-center py-4">No activity recorded yet.</p>'; return; }
+            data.forEach(n => {
+                const typeColour=TYPE_COLOURS[n.activity_type]||TYPE_COLOURS['Note'];
+                const dateStr=new Date(n.created_at).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'});
+                const div=document.createElement('div');
+                div.className='bg-slate-50 p-3 rounded-xl border border-[#dddfe2] space-y-1';
+                div.innerHTML=`<div class="flex items-center justify-between"><span class="text-[8px] font-black uppercase px-2 py-0.5 rounded-full ${typeColour}">${n.activity_type||'Note'}</span><span class="text-[9px] text-slate-400">${dateStr}</span></div><p class="text-xs text-[#1a2238] leading-relaxed">${n.content||''}</p><p class="text-[9px] text-slate-400">${n.performed_by||'Unknown'}</p>`;
+                list.appendChild(div);
+            });
+        }
+
+
+            async function saveNote() {
+              try {
+              if (!activeLead) { showToast('Select a lead first', true); return; }
+              if (!await checkSession()) return;
+
+              const noteEl = document.getElementById('note-input');
+
+              const content = noteEl.value.trim();
+              if (!content) { showToast('Note cannot be empty', true); return; }
+
+              const noteBtn = document.getElementById('save-note-btn');
+              if (noteBtn) { noteBtn.disabled = true; noteBtn.textContent = 'Saving…'; }
+              const payload = {
+                lead_id: activeLead.id,
+                content,
+                activity_type: selectedActivityType,
+                performed_by: currentUser?.email || 'Unknown'
+              };
+
+              // INSERT with one auto-retry on timeout (free tier can be slow)
+              let { data: inserted, error: insertError } = await sbFetch(
+                window.supabaseClient.from('activity_logs').insert(payload).select()
+              );
+
+              if (insertError && insertError.message.includes('timed out')) {
+                console.warn('Insert timed out — retrying once…');
+                if (noteBtn) noteBtn.textContent = 'Retrying…';
+                await new Promise(r => setTimeout(r, 2000)); // 2s back-off
+                ({ data: inserted, error: insertError } = await sbFetch(
+                  window.supabaseClient.from('activity_logs').insert(payload).select()
+                ));
+              }
+
+              if (insertError) {
+                if (noteBtn) { noteBtn.disabled = false; noteBtn.textContent = 'Save Activity'; }
+                showToast('Save failed: ' + insertError.message, true);
+                return;
+              }
+
+              // Auto-advance sales flow stage based on activity type
+              try {
+                const FLOW_ORDER = ['New','Called','Emailed','Sent LinkedIn Message','Sent Follow-Up Email','Discovery Call'];
+                const currentStageIdx = FLOW_ORDER.indexOf(activeLead.sales_flow_stage || 'New');
+                let newFlowStage = null;
+                let newFollowUp  = null;
+
+                if (selectedActivityType === 'Call' && currentStageIdx < FLOW_ORDER.indexOf('Called')) {
+                    newFlowStage = 'Called';
+                } else if (selectedActivityType === 'Email' && currentStageIdx < FLOW_ORDER.indexOf('Emailed')) {
+                    newFlowStage = 'Emailed';
+                    newFollowUp  = addBusinessDays(new Date().toISOString().slice(0,10), crmSettings.linkedin_followup_days);
+                }
+
+                if (newFlowStage) {
+                    const flowUpdates = { sales_flow_stage: newFlowStage };
+                    if (newFollowUp) flowUpdates.next_follow_up_at = newFollowUp;
+                    await sbFetch(window.supabaseClient.from('leads').update(flowUpdates).eq('id', activeLead.id));
+                    activeLead.sales_flow_stage = newFlowStage;
+                    if (newFollowUp) activeLead.next_follow_up_at = newFollowUp;
+                    const editFlow = document.getElementById('edit-flow');
+                    if (editFlow) editFlow.value = newFlowStage;
+                    const editFollowup = document.getElementById('edit-followup');
+                    if (editFollowup && newFollowUp) editFollowup.value = newFollowUp;
+                    updateLinkedInAction(activeLead);
+                }
+              } catch (autoAdvErr) {
+                // Non-critical — log but never block the success toast
+                console.warn('Auto-advance stage failed (non-critical):', autoAdvErr);
+              }
+
+              // Non-critical: stamp last_contacted_at — never blocks success UX
+              try {
+                const { error: updateError } = await sbFetch(
+                  window.supabaseClient.from('leads').update({ last_contacted_at: new Date().toISOString() }).eq('id', activeLead.id)
+                );
+                console.log('last_contacted_at update:', updateError ? updateError.message : 'ok');
+                if (updateError) console.warn('last_contacted_at update failed (non-critical):', updateError);
+              } catch (e) {
+                console.warn('last_contacted_at update threw (non-critical):', e);
+              }
+
+              // Always clear, toast, refresh — insert already succeeded
+              if (noteBtn) { noteBtn.disabled = false; noteBtn.textContent = 'Save Activity'; }
+              noteEl.value = '';
+              showToast('Note Saved ✓');
+              loadNotes(activeLead.id);
+            } catch (saveNoteErr) {
+              // Catch-all: surface any unhandled exception rather than failing silently
+              console.error('saveNote unhandled error:', saveNoteErr);
+              const noteBtn2 = document.getElementById('save-note-btn');
+              if (noteBtn2) { noteBtn2.disabled = false; noteBtn2.textContent = 'Save Activity'; }
+              showToast('Save error: ' + (saveNoteErr?.message || 'unknown error'), true);
+            }
+            } // end saveNote
+
+
+
+        // ── Email ─────────────────────────────────────────────────────────────
+        function updateSendButton(key) {
+            const btn=document.getElementById('send-action-btn');
+            if (key==='linkedin_day4') { btn.textContent='Copy LinkedIn Message'; btn.onclick=copyLinkedInMessage; }
+            else { btn.textContent='Open in Gmail \u2197'; btn.onclick=launchGmail; }
+        }
+        function applyTemplate() {
+            const key=document.getElementById('email-template').value;
+            updateSendButton(key);
+            if (!key||!activeLead) return;
+            const t=emailTemplates.find(t=>t.key===key);
+            if (!t) return;
+            const fill = s=>(s||'').replace(/{first_name}/g,activeLead.first_name||'').replace(/{company}/g,activeLead.company_name||'your company').replace(/{sender_name}/g,currentUserFullName()).replace(/{signature}/g,signature());
+            document.getElementById('email-subject').value=fill(t.subject||'');
+            document.getElementById('email-body').value=fill(t.body);
+            document.getElementById('email-preview-panel').classList.add('hidden');
+        }
+        function signature() {
+            const meta = currentUser?.user_metadata || {};
+            const name = meta.full_name || meta.display_name || '';
+            const parts = [name, meta.title, meta.phone, meta.mocenius_email].filter(Boolean);
+            return parts.join('\n') || 'Mocenius Royalties Inc.';
+        }
+        function handleSendAction() { const k=document.getElementById('email-template').value; if(k==='linkedin_day4') copyLinkedInMessage(); else launchGmail(); }
+        function copyLinkedInMessage() {
+            const body=document.getElementById('email-body').value;
+            if (!body) { showToast('Select a template first',true); return; }
+            navigator.clipboard.writeText(body).then(() => { showToast('LinkedIn message copied \u2713'); const btn=document.getElementById('send-action-btn'); const orig=btn.textContent; btn.textContent='\u2713 Copied \u2014 paste into LinkedIn'; setTimeout(()=>btn.textContent=orig,3000); }).catch(()=>showToast('Copy failed',true));
+        }
+        async function launchGmail() {
+            if (!await checkSession()) return;
+            const to=document.getElementById('email-to').value, cc=document.getElementById('email-cc').value;
+            const subject=document.getElementById('email-subject').value, body=document.getElementById('email-body').value;
+            if (!to) { showToast('No email address for this lead',true); return; }
+            const ue=(currentUser?.email||'').toLowerCase();
+            let sender=ue.includes('john')?'john@mocenius.com':ue.includes('morgan')?'morgan@mocenius.com':'';
+            let url=`https://mail.google.com/mail/?view=cm&to=${encodeURIComponent(to)}&su=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+            if (cc) url+=`&cc=${encodeURIComponent(cc)}`;
+            if (sender) url+=`&authuser=${encodeURIComponent(sender)}`;
+            // Open blank window synchronously — preserves user gesture, bypasses popup blocker
+            const gmailWin = window.open('', '_blank');
+            // Log to Supabase while still foreground (window not navigated yet)
+            if (activeLead) {
+                await sbFetch(window.supabaseClient.from('activity_logs').insert({lead_id:activeLead.id,content:`Email sent \u2014 Subject: "${subject}"`,activity_type:'Email',performed_by:currentUser?.email||'Unknown'}));
+                await sbFetch(window.supabaseClient.from('leads').update({last_contacted_at:new Date().toISOString()}).eq('id',activeLead.id));
+                loadNotes(activeLead.id);
+            }
+            // Navigate already-open blank window to Gmail URL
+            if (gmailWin) gmailWin.location.href = url;
+            showToast('Email launched & logged \u2713');
+        }
+        function buildSigHtml(bookACallUrl) {
+            const meta = currentUser?.user_metadata || {};
+            const name    = meta.full_name      || 'Mocenius Team';
+            const title   = meta.title          || '';
+            const phone   = meta.phone          || '';
+            const email   = meta.mocenius_email || '';
+            const callUrl = meta.book_call_url  || '';
+            const callLink = callUrl
+                ? ` &#8212; <a href="${callUrl}" style="color:#1a2238;text-decoration:underline;font-family:Georgia,'Times New Roman',serif;font-size:15px;font-weight:bold;">Book a call with me</a>`
+                : '';
+            const titleLine = title
+                ? `<p style="margin:0 0 6px 0;font-family:'Courier New',Courier,monospace;font-size:13px;letter-spacing:0.08em;text-transform:uppercase;color:#4a5068;">${title} &nbsp;&middot;&nbsp; Mocenius Royalties Inc.</p>`
+                : `<p style="margin:0 0 6px 0;font-family:'Courier New',Courier,monospace;font-size:13px;letter-spacing:0.08em;text-transform:uppercase;color:#4a5068;">Mocenius Royalties Inc.</p>`;
+            const contactParts = [];
+            if (phone) contactParts.push(`<a href="tel:${phone.replace(/\D/g,'')}" style="color:#4a5068;text-decoration:none;">${phone}</a>`);
+            if (email) contactParts.push(`<a href="mailto:${email}" style="color:#4a5068;text-decoration:none;">${email}</a>`);
+            contactParts.push(`<a href="https://mocenius.com" style="color:#4a5068;text-decoration:underline;">mocenius.com</a>`);
+            return `<p style="margin:0 0 4px 0;font-family:Georgia,'Times New Roman',serif;font-size:15px;font-weight:bold;color:#1a2238;">${name}${callLink}</p>
+${titleLine}
+<p style="margin:0;font-family:'Courier New',Courier,monospace;font-size:13px;color:#4a5068;line-height:1.8;">${contactParts.join(' &nbsp;|&nbsp; ')}</p>`;
+        }
+        function buildEmailHtml(bodyParasHtml, bookACallUrl) {
+            return `<!DOCTYPE html><html><head><meta charset='UTF-8'><style>html,body{margin:0;padding:16px;background:#d8d4cc;}table,td{border-collapse:collapse;}</style></head><body><div style='background:#d8d4cc;padding:16px;'>
+<table id="email-root" width="620" align="center" border="0" cellspacing="0" cellpadding="0" role="presentation" style="width:620px;max-width:620px;margin:0 auto;font-family:Georgia,serif;">
+
+  <!-- GOLD TOP RULE -->
+  <tr>
+    <td height="4" style="height:4px;background-color:#ac9d53;font-size:1px;line-height:1px;">&nbsp;</td>
+  </tr>
+
+  <!-- HEADER -->
+  <tr>
+    <td style="background-color:#1a2238;padding:24px 40px 20px 40px;text-align:center;">
+      <img src="data:image/png;base64,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" width="240" height="auto" alt="Mocenius" style="display:inline-block;border:0;outline:0;line-height:100%;-ms-interpolation-mode:bicubic;max-width:240px;height:auto;">
+      <p style="margin:8px 0 0 0;padding:0;font-family:'Courier New',Courier,monospace;font-size:9px;letter-spacing:0.22em;text-transform:uppercase;color:#ac9d53;line-height:1.4;">Royalties Inc.</p>
+    </td>
+  </tr>
+
+  <!-- GOLD DIVIDER -->
+  <tr>
+    <td height="1" style="height:1px;background-color:#ac9d53;font-size:1px;line-height:1px;">&nbsp;</td>
+  </tr>
+
+  <!-- EMAIL BODY -->
+  <tr>
+    <td style="background-color:#ffffff;padding:40px 40px 32px 40px;">
+
+      ${bodyParasHtml}
+
+    </td>
+  </tr>
+
+  <!-- WHO WE ARE STRIP -->
+  <tr>
+    <td style="background-color:#f7f4ee;padding:0 40px;">
+      <table width="100%" border="0" cellspacing="0" cellpadding="0" role="presentation">
+        <tr>
+          <td style="border-left:3px solid #ac9d53;padding:20px 0 20px 20px;">
+            <p style="margin:0 0 8px 0;font-family:'Courier New',Courier,monospace;font-size:11px;letter-spacing:0.16em;text-transform:uppercase;color:#4a5068;font-weight:bold;">About Mocenius</p>
+            <p style="margin:0 0 12px 0;font-family:Georgia,'Times New Roman',serif;font-size:13px;color:#3a3a3a;line-height:1.65;">We are the team behind Ingenium Books. In the beginning, we managed our own author royalties the way most publishers do. In 2021 we built our way out of it — and in 2022 we opened the service to other publishers.</p>
+            <a href="https://mocenius-whoweare.netlify.app/" style="font-family:'Courier New',Courier,monospace;font-size:13px;letter-spacing:0.08em;color:#1a2238;text-decoration:underline;font-weight:bold;">Our full story &#8594;</a>
+          </td>
+        </tr>
+      </table>
+    </td>
+  </tr>
+
+  <!-- SIGNATURE -->
+  <tr>
+    <td style="background-color:#ffffff;padding:28px 40px 36px 40px;border-top:1px solid #eeeeee;">
+      ${buildSigHtml(bookACallUrl)}
+    </td>
+  </tr>
+
+  <!-- FOOTER -->
+  <tr>
+    <td style="background-color:#1a2238;padding:16px 40px;text-align:center;">
+      <p style="margin:0;font-family:'Courier New',Courier,monospace;font-size:9px;letter-spacing:0.12em;text-transform:uppercase;color:#d4c46a;">Mocenius Royalties Inc. &nbsp;·&nbsp; Langley, British Columbia, Canada &nbsp;·&nbsp; <a href="https://mocenius.com" style="color:#d4c46a;text-decoration:none;">mocenius.com</a></p>
+    </td>
+  </tr>
+
+  <!-- GOLD BOTTOM RULE -->
+  <tr>
+    <td height="3" style="height:3px;background-color:#ac9d53;font-size:1px;line-height:1px;">&nbsp;</td>
+  </tr>
+
+</table>
+</div></body></html>`;
+        }
+
+        function showEmailPreview() {
+            if (!activeLead) return;
+            const bodyText=document.getElementById('email-body').value;
+            if (!bodyText.trim()) { showToast('Select a template first',true); return; }
+            let paras=bodyText.split(/\n\n+/);
+            const sigIdx=paras.findIndex(p=>/^John Wagner-Stafford|^Morgan Wagner-Stafford|^Morgan Gray|^Best regards/.test(p.trim()));
+            if (sigIdx!==-1) paras=paras.slice(0,sigIdx);
+            const pStyle=`margin:0 0 18px 0;font-family:Georgia,'Times New Roman',serif;font-size:15px;color:#2a2a2a;line-height:1.75;`;
+            const greetStyle=`margin:0 0 8px 0;font-family:Georgia,'Times New Roman',serif;font-size:15px;color:#1a2238;line-height:1.6;`;
+            const ctaStyle=`margin:0;font-family:Georgia,'Times New Roman',serif;font-size:15px;color:#2a2a2a;line-height:1.75;`;
+            function applyLinks(txt) {
+                txt=txt.replace(/\bHERE\b/g,`<a href="https://mocenius.com/how-it-works/" style="color:#1a2238;text-decoration:underline;">HERE</a>`);
+                txt=txt.replace(/Book a call with me/g,`<a href="https://mocenius-royalties.fillout.com/royalties-management-discovery-call" style="color:#1a2238;text-decoration:underline;">Book a call with me</a>`);
+                return txt;
+            }
+            function escHtml(s) { return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+            let bodyParasHtml='';
+            paras.forEach((p,i) => {
+                if (!p.trim()) return;
+                const isFirst=i===0, isLast=i===paras.length-1;
+                const style=isFirst?greetStyle:(isLast?ctaStyle:pStyle);
+                bodyParasHtml+=`<p style="${style}">${applyLinks(escHtml(p.trim()).replace(/\n/g,' '))}</p>\n`;
+            });
+            const frame=document.getElementById('email-preview-frame');
+            const selKey=document.getElementById('email-template').value;
+            const selTmpl=emailTemplates.find(t=>t.key===selKey);
+            const bookACallUrl=selTmpl?.book_a_call_url||null;
+            frame.srcdoc=buildEmailHtml(bodyParasHtml,bookACallUrl); frame.style.height='540px';
+            document.getElementById('email-preview-panel').classList.remove('hidden');
+        }
+        function copyFormattedEmail() {
+            const frame=document.getElementById('email-preview-frame');
+            try {
+                const doc=frame.contentDocument||frame.contentWindow.document;
+                const el=doc.getElementById('email-root');
+                const range=doc.createRange(); range.selectNode(el||doc.body);
+                const sel=frame.contentWindow.getSelection(); sel.removeAllRanges(); sel.addRange(range);
+                doc.execCommand('copy'); sel.removeAllRanges();
+                const btn=document.getElementById('copy-fmt-btn'); const orig=btn.textContent;
+                btn.textContent='\u2713 Copied \u2014 paste into Gmail'; btn.style.background='#4a9e6e'; btn.style.color='white';
+                setTimeout(()=>{btn.textContent=orig;btn.style.background='';btn.style.color='';},3000);
+            } catch(e) { showToast('Copy failed',true); }
+        }
+
+        // ── New Prospect ──────────────────────────────────────────────────────
+        function openNewProspect() { document.getElementById('new-prospect-modal').classList.remove('hidden'); }
+        function closeNewProspect() {
+            document.getElementById('new-prospect-modal').classList.add('hidden');
+            ['np-first','np-last','np-email','np-phone','np-email2','np-phone2','np-company','np-job','np-industry','np-source','np-linkedin','np-website','np-assigned'].forEach(id=>document.getElementById(id).value='');
+            document.getElementById('np-status').value='Prospect'; document.getElementById('np-priority').value=''; document.getElementById('np-timezone').value='';
+        }
+        async function saveNewProspect() {
+            const first=document.getElementById('np-first').value.trim(), last=document.getElementById('np-last').value.trim();
+            if (!first&&!last) { showToast('First or last name required',true); return; }
+            const { error } = await window.supabaseClient.from('leads').insert({
+                first_name:first||null, last_name:last||null,
+                email:document.getElementById('np-email').value.trim()||null,
+                phone_number:document.getElementById('np-phone').value.trim()||null,
+                secondary_email:document.getElementById('np-email2').value.trim()||null,
+                secondary_phone:document.getElementById('np-phone2').value.trim()||null,
+                company_name:document.getElementById('np-company').value.trim()||null,
+                job_title:document.getElementById('np-job').value.trim()||null,
+                industry:document.getElementById('np-industry').value.trim()||null,
+                source_tag:document.getElementById('np-source').value.trim()||null,
+                linkedin_url:document.getElementById('np-linkedin').value.trim()||null,
+                website_url:document.getElementById('np-website').value.trim()||null,
+                timezone:document.getElementById('np-timezone').value||null,
+                assigned_to:document.getElementById('np-assigned').value.trim()||null,
+                status:document.getElementById('np-status').value||'Prospect',
+                priority_level:document.getElementById('np-priority').value||null,
+                last_modified_by:currentUser?.email||null,
+            });
+            if (error) { showToast('Save failed: '+error.message,true); return; }
+            showToast('Prospect added \u2713'); closeNewProspect(); fetchLeads();
+        }
+        // Attach modal backdrop-click listeners safely.
+        // settings-modal is defined after this script block, so we defer to DOMContentLoaded.
+        (function attachModalListeners() {
+            function bind(id, fn) {
+                const el = document.getElementById(id);
+                if (el) { el.addEventListener('click', e => { if (e.target === e.currentTarget) fn(); }); return true; }
+                return false;
+            }
+            const prospectBound = bind('new-prospect-modal', closeNewProspect);
+            const settingsBound = bind('settings-modal', closeSettingsModal);
+            // settings-modal may not exist yet (defined after script) — defer if needed
+            if (!settingsBound || !prospectBound) {
+                document.addEventListener('DOMContentLoaded', () => {
+                    if (!prospectBound) bind('new-prospect-modal', closeNewProspect);
+                    if (!settingsBound) bind('settings-modal', closeSettingsModal);
+                });
+            }
+        })();
+
+        // ── Global Activity Log ───────────────────────────────────────────────
+        function openActivityLog() { document.getElementById('activity-log-modal').classList.remove('hidden'); setLogToday(); }
+        function closeActivityLog() { document.getElementById('activity-log-modal').classList.add('hidden'); }
+        function setLogToday() { const t=new Date().toISOString().slice(0,10); document.getElementById('log-date-filter').value=t; fetchActivityLog(); }
+        async function fetchActivityLog() {
+            const dateVal=document.getElementById('log-date-filter').value; if (!dateVal) return;
+            const dayStart=new Date(dateVal+'T00:00:00').toISOString(), dayEnd=new Date(dateVal+'T23:59:59').toISOString();
+            const list=document.getElementById('activity-log-list');
+            list.innerHTML='<p class="text-slate-400 text-xs text-center py-8">Loading...</p>';
+            const { data, error } = await sbFetch(window.supabaseClient.from('activity_logs').select('*, leads(first_name,last_name,company_name)').gte('created_at',dayStart).lte('created_at',dayEnd).order('created_at',{ascending:false}));
+            if (error) {
+                const isAuth = (error.message||'').toLowerCase().includes('jwt') || (error.message||'').toLowerCase().includes('not authenticated');
+                const hint = isAuth ? ' Your session may have expired — sign out and back in.' : ' Try reloading.';
+                list.innerHTML=`<p class="text-red-400 text-xs text-center py-8">⚠ Could not load activity log.${hint}</p>`;
+                return;
+            }
+            if (!data||!data.length) { list.innerHTML='<p class="text-slate-400 text-xs text-center py-8">No activity for this date.</p>'; return; }
+            list.innerHTML='';
+            data.forEach(n => {
+                const lead=n.leads||{}, leadName=[lead.first_name,lead.last_name].filter(Boolean).join(' ')||'\u2014';
+                const typeColour=TYPE_COLOURS[n.activity_type]||TYPE_COLOURS['Note'];
+                const timeStr=new Date(n.created_at).toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit'});
+                const div=document.createElement('div'); div.className='bg-slate-50 border border-[#dddfe2] rounded-xl p-3 space-y-1';
+                div.innerHTML=`<div class="flex items-center justify-between"><div class="flex items-center gap-2"><span class="text-[8px] font-black uppercase px-2 py-0.5 rounded-full ${typeColour}">${n.activity_type||'Note'}</span><span class="text-[10px] font-bold text-[#1a2238]">${leadName}${lead.company_name?' \u00b7 '+lead.company_name:''}</span></div><span class="text-[9px] text-slate-400">${timeStr}</span></div><p class="text-xs text-[#1a2238] leading-relaxed">${n.content||''}</p><p class="text-[9px] text-slate-400">${n.performed_by||'Unknown'}</p>`;
+                list.appendChild(div);
+            });
+        }
+        function sendLogByEmail() {
+            const dateVal=document.getElementById('log-date-filter').value;
+            const entries=document.getElementById('activity-log-list').querySelectorAll('div.bg-slate-50');
+            if (!entries.length) { showToast('No activity to send',true); return; }
+            let body='MOCENIUS ACTIVITY LOG \u2014 '+dateVal+'\n'+'='.repeat(40)+'\n\n';
+            entries.forEach(div => {
+                const parts=div.querySelectorAll('span'); const badge=(parts[0]?.textContent||'').trim(); const name=(parts[1]?.textContent||'').trim(); const time=(parts[2]?.textContent||'').trim();
+                const content=(div.querySelector('p.text-xs')?.textContent||'').trim();
+                body+=`[${time}] ${badge} \u2014 ${name}\n${content}\n\n`;
+            });
+            const subject='Mocenius Activity Log \u2014 '+dateVal;
+            const ue=(currentUser?.email||'').toLowerCase();
+            const sender=ue.includes('john')?'john@mocenius.com':ue.includes('morgan')?'morgan@mocenius.com':'';
+            const to='john@mocenius.com,boni@mocenius.com,morgan@mocenius.com';
+            let url=`https://mail.google.com/mail/?view=cm&to=${encodeURIComponent(to)}&su=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+            if (sender) url+=`&authuser=${encodeURIComponent(sender)}`;
+            window.open(url,'_blank');
+        }
+
+        // ── UI Helpers ────────────────────────────────────────────────────────
+        function switchTab(tab) {
+            ['detail','email','script'].forEach(t => { document.getElementById(`tab-${t}`).classList.toggle('hidden',t!==tab); document.getElementById(`tab-btn-${t}`).classList.toggle('tab-active',t===tab); });
+            if (tab === 'script') renderCallScript();
+        }
+        function showToast(msg,isError=false) {
+            const t=document.getElementById('save-toast');
+            t.textContent=msg;
+            t.className=['absolute top-4 left-1/2 -translate-x-1/2 px-6 py-2 rounded-full','text-[10px] font-black uppercase tracking-widest shadow-2xl z-[60] save-toast text-white',isError?'bg-red-600':'bg-emerald-600'].join(' ');
+            t.classList.add('show'); setTimeout(()=>t.classList.remove('show'),2500);
+        }
     </script>
-  </body>
+    <!-- ── Settings Modal ───────────────────────────────────────────────── -->
+    <div id="settings-modal" class="hidden fixed inset-0 z-[300] flex items-center justify-center bg-black/50">
+        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-sm mx-4">
+            <div class="bg-[#1a2238] rounded-t-2xl px-6 py-4 flex items-center justify-between">
+                <h2 class="text-white font-black text-base tracking-tight">⚙ Flow Presets</h2>
+                <button onclick="closeSettingsModal()" class="text-white/60 hover:text-white text-xl font-bold">✕</button>
+            </div>
+            <div class="p-6 space-y-5">
+                <div>
+                    <label class="label-xs mb-1 block">Days after first email → send LinkedIn message</label>
+                    <div class="flex items-center gap-3">
+                        <input id="setting-linkedin-days" type="number" min="1" max="60" value="4"
+                            class="field-input w-24 text-center font-bold text-lg">
+                        <span class="text-[11px] text-slate-400">business days</span>
+                    </div>
+                </div>
+                <div>
+                    <label class="label-xs mb-1 block">Days after LinkedIn sent → send follow-up email</label>
+                    <div class="flex items-center gap-3">
+                        <input id="setting-email-days" type="number" min="1" max="60" value="8"
+                            class="field-input w-24 text-center font-bold text-lg">
+                        <span class="text-[11px] text-slate-400">business days</span>
+                    </div>
+                </div>
+                <button onclick="saveSettings()"
+                    class="w-full bg-[#c5b358] text-[#1a2238] py-3 rounded-xl text-[10px] font-black uppercase tracking-widest hover:opacity-90 transition">
+                    Save Presets
+                </button>
+            </div>
+        </div>
+    </div>
+
+</body>
 </html>
